@@ -1,4 +1,5 @@
 from db_file import Database
+from db_file import db
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from CTkMessagebox import CTkMessagebox
@@ -20,7 +21,7 @@ class LoginPage(ctk.CTk):
     
         # Login Window Configuration
         self.title("Login Page")
-        self.geometry("850x750")
+        self.geometry("900x800")
         self.resizable(False, False)
         ctk.set_appearance_mode("light")
         
@@ -69,7 +70,7 @@ class LoginPage(ctk.CTk):
         
         # Email Label and Entry
         self.email_label = ctk.CTkLabel(self.login_frame, text="EMAIL", font=("Arial", 14, "bold"), text_color="#4F46E5", anchor ="w")
-        self.email_label.pack(fill="x", padx=50, pady=(0, 5))
+        self.email_label.pack(fill="x", padx=76, pady=(0, 5))
         
         self.email_entry = ctk.CTkEntry(self.login_frame, 
                                         placeholder_text="example@gmail.com",
@@ -83,7 +84,7 @@ class LoginPage(ctk.CTk):
         
         # Password Label and Entry
         self.password_label = ctk.CTkLabel(self.login_frame, text="PASSWORD", font=("Arial", 14, "bold"), text_color="#4F46E5", anchor="w")
-        self.password_label.pack(fill="x", padx=50, pady=(0, 5))
+        self.password_label.pack(fill="x", padx=76, pady=(0, 5))
         
         self.password_entry = ctk.CTkEntry(self.login_frame,
                                            placeholder_text="enter password",
@@ -98,11 +99,11 @@ class LoginPage(ctk.CTk):
         # Forgot Password Link
         self.forget_label = ctk.CTkLabel(self.login_frame, text="Forget Password?",
                                          font=("Arial", 12, "underline"), text_color="#4F46E5", cursor="hand2")
-        self.forget_label.pack(padx=(0, 60), pady=(0, 10), anchor="e")
+        self.forget_label.pack(padx=(0, 80), pady=(0, 10), anchor="e")
         
         # Login Button
         self.login_button = ctk.CTkButton(self.login_frame, text="Login", command=self.handle_login,
-                                          width=250, height=50, font=("Arial", 20, "bold"),
+                                          width=250, height=45, font=("Arial", 20, "bold"),
                                           fg_color="#4F46E5", hover_color="#4338CA",
                                           text_color="white", corner_radius=50)
         self.login_button.pack(padx=40, pady=(0, 5))
@@ -125,7 +126,7 @@ class LoginPage(ctk.CTk):
         self.status_label = ctk.CTkLabel(self.login_frame, text="", text_color="red", font=("Arial", 14))
         self.status_label.pack(pady=(0, 10))
         
-# Email Encryption
+    # Email Encryption
     def hash_email(self, email):
         """ Hashing email with SHA-256 """
         return hashlib.sha256(email.lower().encode('utf-8')).hexdigest()
@@ -149,11 +150,12 @@ class LoginPage(ctk.CTk):
        import admin_dashboard
        admin_dashboard.AdminDashboard().mainloop()
     
-    def open_user_dashboard(self):
-        """Placeholder for open customer dashboard"""
+    def open_user_dashboard(self, customer_id, email):
+        """Open customer dashboard with correct customer_id"""
         self.destroy()
         import user_dashboard
-        user_dashboard.UserDashboard().mainloop()
+        user_dashboard.UserDashboard(customer_id=customer_id, email=email).mainloop()
+
     
     # User Authentication & Authorization
     def handle_login(self):
@@ -162,67 +164,79 @@ class LoginPage(ctk.CTk):
         input_password = self.password_entry.get()
         
         if not input_email or not input_password:
-            #self.status_label.configure(text="Email and Password can not be empty")
-            CTkMessagebox(title="Error", message=f"Email and Password can not be empty", icon="cancel")
-            return False
-        
+            CTkMessagebox(title="Error", message="Email and Password cannot be empty", icon="cancel")
+            return
+
         hashed_input_email = self.hash_email(input_email)
-        
+
         cursor = connection.cursor(dictionary=True)
-        
+
+        # FIXED: Now retrieving customer_id
         cursor.execute("""
-                       SELECT password, error_login_attempt, is_locked, role FROM login WHERE email = %s
-                       """, (hashed_input_email,))
+            SELECT customer_id, password, error_login_attempt, is_locked, role
+            FROM login
+            WHERE email = %s
+        """, (hashed_input_email,))
+        
         user_record = cursor.fetchone()
-        cursor.close()  
-        
+        cursor.close()
+
         if not user_record:
-            #self.status_label.configure(text="Invalid Credentials")
             CTkMessagebox(title="Error", message="Invalid Credentials", icon="cancel")
-            return False
-        
-        stored_password_hash = user_record['password']
-        current_attempts = user_record['error_login_attempt']
-        is_locked = user_record['is_locked']
-        user_role = user_record['role']
-        
-        # Authentication
+            return
+
+        stored_password_hash = user_record["password"]
+        customer_id = user_record["customer_id"]   # IMPORTANT FIX
+        current_attempts = user_record["error_login_attempt"]
+        is_locked = user_record["is_locked"]
+        user_role = user_record["role"]
+
+        # Account locked
         if is_locked == 1:
-            #self.status_label.configure(text="Account is locked, Please contact Admin.")
-            CTkMessagebox(title="Error", message="Account is locked, Please contact Admin.", icon="cancel")
-            return False
-        
+            CTkMessagebox(title="Error", message="Account is locked, contact admin.", icon="cancel")
+            return
+
+        # Password verification
         try:
             password_matches = bcrypt.checkpw(input_password.encode('utf-8'), stored_password_hash.encode('utf-8'))
         except ValueError:
-            #self.status_label.configure(text="System error, Contact support.")
-            CTkMessagebox(title="Error", message="System error, Contact support.", icon="cancel")
-            return False
-        
+            CTkMessagebox(title="Error", message="System error, contact support.", icon="cancel")
+            return
+
+        # LOGIN SUCCESS
         if password_matches:
+            # reset attempts
             if current_attempts > 0:
                 self.update_login_attempts(hashed_input_email, 0, 0)
-                
-            if input_email.lower() == "admin@gmail.com" and user_role.lower() == "admin":
+
+            if user_role.lower() == "admin":
                 self.open_admin_dashboard()
             else:
-                self.open_user_dashboard()
-                
+                #  pass customer_id to dashboard
+                self.logged_in_email = input_email    # REAL EMAIL
+                self.logged_in_customer_id = customer_id
+
+                self.open_user_dashboard(customer_id, self.logged_in_email)
+            return
+
+        # LOGIN FAILED
+        new_attempts = current_attempts + 1
+        new_is_locked = 1 if new_attempts >= MAX_LOGIN_ATTEMPTS else 0
+
+        self.update_login_attempts(hashed_input_email, new_attempts, new_is_locked)
+
+        if new_is_locked:
+            self.status_label.configure(
+                text=f"Maximum login attempts reached. Account LOCKED.",
+                text_color="red"
+            )
         else:
-            new_attempts = current_attempts + 1
-            if new_attempts >= MAX_LOGIN_ATTEMPTS:
-                new_is_locked = 1 # Lock the account
-            else:
-                new_is_locked = 0 # keep it unlocked
-                
-                self.update_login_attempts(hashed_input_email, new_attempts, new_is_locked)
-                
-                if new_is_locked == 1:
-                    self.status_label.configure(text=f"Maximum login attempts ({MAX_LOGIN_ATTEMPTS}) reached, Account LOCKED.", text_color="red")
-                else:
-                    remaining_attempts = MAX_LOGIN_ATTEMPTS - new_attempts
-                    self.status_label.configure(text=f"Invalid Credentials. {remaining_attempts} attempts remaining.")
-                    
+            remaining = MAX_LOGIN_ATTEMPTS - new_attempts
+            self.status_label.configure(
+                text=f"Invalid Credentials. {remaining} attempts remaining."
+            )
+
+
     
     # Sign up page 
     def open_signup(self, event = None):

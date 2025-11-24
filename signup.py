@@ -1,4 +1,5 @@
 from db_file import Database
+from db_file import db
 import customtkinter as ctk
 from PIL import Image, ImageTk
 import hashlib
@@ -136,67 +137,137 @@ class SignupPage(ctk.CTk):
         return hashed_bytes.decode('utf-8')
     
 
-    # ---------------- VALIDATION LOGIC ----------------
     def validate_inputs(self, data):
         """Validate all required fields and input formats"""
+
+        import re
+        from CTkMessagebox import CTkMessagebox
+
+        # -------------------------------------------------------
+        #  EMPTY FIELDS CHECK
+        # -------------------------------------------------------
         for key, value in data.items():
             if not value.strip():
-                CTkMessagebox(title="Error", message=f"Please enter your {key.replace('_', ' ')}.", icon="cancel")
+                CTkMessagebox(title="Error", 
+                            message=f"Please enter your {key.replace('_', ' ')}.", 
+                            icon="cancel")
                 return False
 
-        #  FIRST & LAST NAME CHECK
+        # -------------------------------------------------------
+        #  FIRST & LAST NAME VALIDATION
+        # -------------------------------------------------------
         name_pattern = r"^[A-Za-z]+$"
-        if not re.match(name_pattern, data['first_name']):
-            CTkMessagebox(title="Error", message="First name must contain only letters (A-Z).", icon="cancel")
-            return False
-        if not re.match(name_pattern, data['last_name']):
-            CTkMessagebox(title="Error", message="Last name must contain only letters (A-Z).", icon="cancel")
+
+        # Check letters only
+        if not re.match(name_pattern, data["first_name"]):
+            CTkMessagebox(title="Error", 
+                        message="First name must contain only letters (A–Z).", 
+                        icon="cancel")
             return False
 
-        #  EMAIL CHECK
-        valid_domains = ["gmail.com", "icloud.com", "yahoo.com"]
-        email_pattern = r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[A-Za-z]{2,}$"
-        email = data['email'].strip().lower()
+        if not re.match(name_pattern, data["last_name"]):
+            CTkMessagebox(title="Error", 
+                        message="Last name must contain only letters (A–Z).", 
+                        icon="cancel")
+            return False
+
+        # Prevent repeated characters (aaa, bbbbb, zzzzzz)
+        if len(set(data["first_name"].lower())) == 1:
+            CTkMessagebox(title="Error", 
+                        message="First name cannot be all the same letter.", 
+                        icon="cancel")
+            return False
+
+        if len(set(data["last_name"].lower())) == 1:
+            CTkMessagebox(title="Error", 
+                        message="Last name cannot be all the same letter.", 
+                        icon="cancel")
+            return False
+
+        # -------------------------------------------------------
+        #  EMAIL VALIDATION (REAL-LIFE FORMAT, ANY DOMAIN)
+        # -------------------------------------------------------
+        email = data["email"].strip()
+
+        email_pattern = (
+            r"^[a-zA-Z0-9._%+-]+"      # Name part
+            r"@"                       
+            r"[a-zA-Z0-9.-]+\."        # Domain name (gmail, yahoo, school emails, etc.)
+            r"[A-Za-z]{2,}$"           # TLD (.com, .org, .edu, .cn, .jp)
+        )
 
         if not re.match(email_pattern, email):
-            CTkMessagebox(title="Error", message="Invalid email format (e.g., name@gmail.com).", icon="cancel")
-            return False
-
-        domain = email.split('@')[-1]
-        if domain not in valid_domains:
-            CTkMessagebox(title="Error", message=f"Invalid email domain '{domain}'. Allowed: gmail.com, icloud.com, yahoo.com.", icon="cancel")
-            return False
-
-        #  PHONE NUMBER CHECK
-        if not data['phone_no'].isdigit():
-            CTkMessagebox(title="Error", message="Phone number must contain only digits (0-9).", icon="cancel")
-            return False
-        if len(data['phone_no']) != 11:
-            CTkMessagebox(title="Error", message="Phone number must be exactly 11 digits.", icon="cancel")
-            return False
-
-        #  PASSWORD CHECK
-        password = data['password']
-        if " " in password:
-            CTkMessagebox(title="Error", message="Password cannot contain spaces.", icon="cancel")
-            return False
-
-        def is_secure_password(password):
-            return (len(password) >= 8 and
-                    re.search(r"[A-Z]", password) and
-                    re.search(r"[a-z]", password) and
-                    re.search(r"[0-9]", password) and
-                    re.search(r"[@$!%*#?&]", password))
-
-        if not is_secure_password(password):
             CTkMessagebox(
                 title="Error",
-                message="Password must be ≥8 characters, include uppercase, lowercase, number, and special symbol.",
+                message="Invalid email format. Example: name@example.com",
                 icon="cancel"
             )
             return False
 
+        # -------------------------------------------------------
+        #  PHONE NUMBER VALIDATION
+        # -------------------------------------------------------
+        phone = data["phone_no"].strip()
+
+        # Digits only
+        if not phone.isdigit():
+            CTkMessagebox(title="Error",
+                        message="Phone number must contain only digits (0–9).",
+                        icon="cancel")
+            return False
+
+        # Must be 11 digits
+        if len(phone) != 11:
+            CTkMessagebox(title="Error",
+                        message="Phone number must be exactly 11 digits.",
+                        icon="cancel")
+            return False
+
+        # Cannot be repeating digits (e.g., 11111111111)
+        if len(set(phone)) == 1:
+            CTkMessagebox(title="Error",
+                        message="Phone number cannot be all the same digit.",
+                        icon="cancel")
+            return False
+
+        # -------------------------------------------------------
+        #  PASSWORD VALIDATION
+        # -------------------------------------------------------
+        password = data["password"]
+
+        if " " in password:
+            CTkMessagebox(title="Error",
+                        message="Password cannot contain spaces.",
+                        icon="cancel")
+            return False
+
+        def is_secure_password(password):
+            return (
+                len(password) >= 8 and
+                re.search(r"[A-Z]", password) and
+                re.search(r"[a-z]", password) and
+                re.search(r"[0-9]", password) and
+                re.search(r"[@$!%*#?&]", password)
+            )
+
+        if not is_secure_password(password):
+            CTkMessagebox(
+                title="Error",
+                message="Password must be ≥ 8 characters and include:\n"
+                        "- Uppercase letter\n"
+                        "- Lowercase letter\n"
+                        "- Number\n"
+                        "- Special symbol (@$!%*#?&)",
+                icon="cancel"
+            )
+            return False
+
+        # -------------------------------------------------------
+        # PASSED ALL CHECKS
+        # -------------------------------------------------------
         return True
+
+
 
 
     # ---------------- DATABASE LOGIC ----------------

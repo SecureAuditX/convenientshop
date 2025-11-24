@@ -10,7 +10,7 @@ class WelcomePage(ctk.CTk):
         
         # setup main window
         self.title("Welcome to Brightview Provision")
-        self.geometry("800x700") # size of the window
+        self.geometry("900x800") # size of the window
         self.resizable(False, False) # window not resizable
         ctk.set_appearance_mode("light") #set theme to light mode
         ctk.set_default_color_theme("green")
@@ -21,7 +21,7 @@ class WelcomePage(ctk.CTk):
         
         # Welcome text
         self.welcome_label = ctk.CTkLabel(self.main_frame, text = "Welcome to", font=("Arial", 36, "bold"), text_color = "#4F46E5")
-        self.welcome_label.pack(pady=(80, 5))
+        self.welcome_label.pack(pady=(120, 5))
         
         # Load and display the logo image
         try:
@@ -33,7 +33,7 @@ class WelcomePage(ctk.CTk):
             self.logo_image = ImageTk.PhotoImage(resized_image)
 
             self.logo_label = ctk.CTkLabel(self.main_frame, image =self.logo_image, text ="")
-            self.logo_label.pack(pady =(20))        
+            self.logo_label.pack(pady =(30))        
         
         except FileNotFoundError:
             print("Error: Logo not found")
@@ -50,7 +50,7 @@ class WelcomePage(ctk.CTk):
                                              hover_color = "#45A049",
                                              corner_radius = 50 
                                              )
-        self.get_started_btn.pack(pady=(20, 50))
+        self.get_started_btn.pack(pady=(30, 50))
         
        
     def open_login_page(self):
