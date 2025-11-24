@@ -125,7 +125,7 @@ class App(ctk.CTkFrame, HashingMixin):
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
-                password="zxcvbnm",
+                password="SECRET",
                 database="convenient_shop"
             )
             cursor = conn.cursor(dictionary=True)
