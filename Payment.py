@@ -326,6 +326,40 @@ class Payment(ctk.CTkFrame):
             "email": email
         }
         return True, data
+    
+    def card_is_valid(self,card_no):
+        nDigits=len(card_no)
+        nSum=0
+        isSecond=False
+        
+        for i in range(nDigits -1, -1, -1):
+            d=ord(card_no[i])-ord('0')
+            if(isSecond==True):
+                d=d*2
+                
+            nSum+=d // 10
+            nSum+= d % 10
+            isSecond=not isSecond
+        if(nSum % 10 == 0):
+            return True
+        else:
+            return False        
+        
+    def detect_card_type(self,number):
+        if number.startswith("4"):
+            return "Visa"
+        elif  number.startswith(("51", "52", "53", "54", "55")):
+            return "Master Card"
+        elif  number.startswith(("62", "60", "65")):
+            return "Union Pay"
+        else:
+            return None
+        
+    def update_card_type(self,event=None):
+        num=self.card_numbr_entry.get().replace(" ", "").replace("-", "")
+        card=self.detect_card_type(num)
+        if card:
+            self.card_combo.set(card)
         
     def show_message(self, msg, color="red"):
         popup = ctk.CTkLabel(self, text=msg, text_color=color, font=("Arial", 14, "bold"))
