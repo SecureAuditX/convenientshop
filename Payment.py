@@ -145,6 +145,7 @@ class Payment(ctk.CTk):
         astrix_lbl.grid(row=2,sticky="nw",padx=(85,15),pady=(10,10))
         self.card_numbr_entry=ctk.CTkEntry(self.add_card_container,placeholder_text="(eg. 4335-6765-74300)",fg_color="#D6D9FF",border_color="#D6D9FF",width=250,height=40)
         self.card_numbr_entry.grid(row=2,sticky="w",padx=(20,10),pady=(40,10))
+        self.card_numbr_entry.bind("<KeyRelease>", self.update_card_type)
         # expiry
         card_expiry_lbl=ctk.CTkLabel(self.add_card_container,text="Expiration Date",text_color="black",font=("Arial",16))
         card_expiry_lbl.grid(row=2,column=1,sticky="nw",padx=(10,150),pady=(10,10))
@@ -279,9 +280,10 @@ class Payment(ctk.CTk):
         address = self.address_entry.get().strip()
         email = self.email_entry.get().strip()
         
-        if not full_name or not re.match(r"^[A-Za-z]+$",full_name):
+        if not re.match(r"^[A-Za-z]+(?: [A-Za-z]+)*$", full_name):
             return False, "Please enter a valid full name (letters and spaces only)"
-        if not card_no_raw.isdigit() or not (13 <= len(card_no_raw)<=19):
+        
+        if not card_no_raw.isdigit() or not (len(card_no_raw)<=16):
             return False, "Please enter a valid card number(13-19 digits)."
         
         card_no_masked="**** **** **** "+ card_no_raw[-4:]
@@ -298,8 +300,8 @@ class Payment(ctk.CTk):
         if year <now.year or (year ==now.year and month< now.month):
             return False, "Card is expired"
         
-        if not cvv_raw.isdigit() or len(cvv_raw) not in(3,4):
-            return False, "CVV must be 3 or 4 digits"
+        if not cvv_raw.isdigit() or len(cvv_raw) !=3:
+            return False, "CVV must be 3 digits."
         
         if not address:
             return False, "Address is required"
@@ -321,6 +323,40 @@ class Payment(ctk.CTk):
             "email":email
         }
         return True, data
+    
+    def card_is_valid(self,card_no):
+        nDigits=len(card_no)
+        nSum=0
+        isSecond=False
+        
+        for i in range(nDigits -1, -1, -1):
+            d=ord(card_no[i])-ord('0')
+            if(isSecond==True):
+                d=d*2
+                
+            nSum+=d // 10
+            nSum+= d % 10
+            isSecond=not isSecond
+        if(nSum % 10 == 0):
+            return True
+        else:
+            return False        
+        
+    def detect_card_type(self,number):
+        if number.startswith("4"):
+            return "Visa"
+        elif  number.startswith(("51", "52", "53", "54", "55")):
+            return "Master Card"
+        elif  number.startswith(("62", "60", "65")):
+            return "Union Pay"
+        else:
+            return None
+        
+    def update_card_type(self,event=None):
+        num=self.card_numbr_entry.get().replace(" ", "").replace("-", "")
+        card=self.detect_card_type(num)
+        if card:
+            self.card_combo.set(card)
         
     def show_message(self,msg,color="red"):
         popup=ctk.CTkLabel(self,text=msg,text_color=color,font=("Arial",14,"bold"))

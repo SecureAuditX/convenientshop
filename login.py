@@ -1,4 +1,4 @@
-from db_file import Database
+# from db_file import Database
 import customtkinter as ctk
 from PIL import Image, ImageTk
 from CTkMessagebox import CTkMessagebox
@@ -9,9 +9,9 @@ import sys
 import os
 
 # Importing the db connection from db_file.py
-db = Database()
-connection = db.DB_Connection()
-MAX_LOGIN_ATTEMPTS = 3
+# db = Database()
+# connection = db.DB_Connection()
+# MAX_LOGIN_ATTEMPTS = 3
 
 class LoginPage(ctk.CTk):
 
