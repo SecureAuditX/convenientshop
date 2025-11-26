@@ -39,9 +39,9 @@ class App(ctk.CTkFrame, HashingMixin):
         self.grid_columnconfigure(0, weight=1)
         self.grid_columnconfigure(1, weight=1)
 
-        ENTRY_BG = "#AFC0FF"
+        ENTRY_BG = "#AFC0FF"     #E0DDF0  #AFC0FF
         ENTRY_BORDER = "#D3D3D3"
-        BUTTON_COLOR = "#2A3AEC"
+        BUTTON_COLOR = "#2A3AEC"  #2A3AEC
 
         # ---------------- TITLE ----------------
         page_title = ctk.CTkLabel(self, text="Settings", font=("Arial", 18, "bold"), text_color="black")
@@ -125,7 +125,7 @@ class App(ctk.CTkFrame, HashingMixin):
             conn = mysql.connector.connect(
                 host="localhost",
                 user="root",
-                password="SECRET",
+                password="zxcvbnm",
                 database="convenient_shop"
             )
             cursor = conn.cursor(dictionary=True)

@@ -1,5 +1,6 @@
 from db_file import db
 import customtkinter as ctk
+import tkinter as tk
 from PIL import Image, ImageTk
 import datetime
 import traceback
@@ -66,12 +67,13 @@ class UserDashboard(ctk.CTk):
         # --- Sidebar Panel ---
         
         #sidebar frame (left panel)
-        self.sidebar_frame = ctk.CTkFrame(self, fg_color="#D8DBF7", corner_radius=10)
+        self.sidebar_frame = ctk.CTkFrame(self, fg_color="#E0DDF0", corner_radius=10) #D8DBF7
         self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
         # increase number of rows
         for i in range(0, 12):
             self.sidebar_frame.grid_rowconfigure(i, weight=0)  # give padding rows near bottom
         self.sidebar_frame.grid_rowconfigure(11, weight=1) # space before logout
+        
         
         # User Profile
         self.profile_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
@@ -163,7 +165,29 @@ class UserDashboard(ctk.CTk):
         self.main_content_area.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
         self.main_content_area.grid_columnconfigure(0, weight=1) # Center content horizontally
         self.main_content_area.grid_rowconfigure(0, weight=1)
+        
+        
+        # Cart icon frame (top-right corner)
+        self.cart_icon_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent", width=40, height=40)
+        self.cart_icon_frame.grid(row=0, column=1, sticky="ne", padx=30, pady=(40, 0))  # Top-right corner
 
+        # Load cart icon
+        self.cart_icon = Image.open(r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images\shopping-cart.png").resize((30, 30), Image.LANCZOS)
+        self.cart_image = ImageTk.PhotoImage(self.cart_icon)
+
+        self.cart_label = ctk.CTkLabel(self.cart_icon_frame, image=self.cart_image, text="")
+        self.cart_label.grid(row=0, column=0)
+
+        # Add item count text to the cart icon
+        self.item_count_label = ctk.CTkLabel(self.cart_icon_frame, text="0", font=("Arial", 12, "bold"), text_color="black")
+        self.item_count_label.grid(row=0, column=1, padx=5)
+
+        # Bind the cart icon to redirect to checkout
+        self.cart_label.bind("<Button-1>", self.redirect_to_checkout)
+
+        # Update the cart item count
+        self.update_cart_item_count()
+        
         # Content Frames for different sections (Dashboard, Categories, etc.) 
         self.dashboard_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
         self.category_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
@@ -175,6 +199,44 @@ class UserDashboard(ctk.CTk):
         self.search_var = ctk.StringVar() 
         # initially show the dashboard content
         self.show_dashboard_content()
+        
+    def update_cart_item_count(self):
+        """
+        Updates the number of items in the cart by checking the check_out table.
+        """
+        try:
+            conn = db.DB_Connection()
+            cursor = conn.cursor()
+
+            # Query the number of items in the active cart for the customer
+            cursor.execute("""
+                SELECT SUM(quantity) AS total_items
+                FROM check_out
+                WHERE customer_id = %s AND total IS NULL
+            """, (self.customer_id,))
+
+            row = cursor.fetchone()
+
+            total_items = row[0] if row[0] else 0  # If no items, set total_items to 0
+
+            # Update the cart icon's label with the number of items
+            self.item_count_label.configure(text=str(total_items))
+
+        except Exception as e:
+            print(f"Error updating cart item count: {e}")
+
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+
+        
+    def redirect_to_checkout(self, event=None):
+        """Redirect to the checkout page when the cart icon is clicked."""
+        print("Redirecting to checkout...")
+        self.show_checkout_content()
     
     def load_icon(self, icon_name, size):
         
@@ -263,7 +325,8 @@ class UserDashboard(ctk.CTk):
             category_load_image_func=category_load_image, 
             get_products_by_category_func=Get_products_by_category,
             customer_id=self.customer_id,
-            email=self.logged_in_email
+            email=self.logged_in_email,
+            cart_update_callback=self.update_cart_item_count
         )
         category_ui.pack(expand=True, fill="both", padx=0, pady=0)
     
@@ -278,7 +341,8 @@ class UserDashboard(ctk.CTk):
         self.checkout_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         
         # Instantiate and place the Checkout UI
-        checkout_ui = Checkout(self.checkout_content_frame, customer_id=self.customer_id, email=self.logged_in_email)
+        # Create an instance of Checkout and pass update_cart_item_count as a callback
+        checkout_ui = Checkout(self.checkout_content_frame, customer_id=self.customer_id, email=self.logged_in_email, cart_update_callback=self.update_cart_item_count)
         checkout_ui.pack(expand=True, fill="both", padx=0, pady=0) 
         
     def show_payment_content(self):
@@ -292,7 +356,7 @@ class UserDashboard(ctk.CTk):
         self.payment_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         
         # Instantiate and place the Payment UI
-        payment_ui = Payment(self.payment_content_frame, customer_id=self.customer_id, email=self.logged_in_email)
+        payment_ui = Payment(self.payment_content_frame, customer_id=self.customer_id, email=self.logged_in_email, cart_update_callback=self.update_cart_item_count)
         payment_ui.pack(expand=True, fill="both", padx=0, pady=0)
 
     def show_history_content(self):
@@ -366,12 +430,11 @@ class UserDashboard(ctk.CTk):
         self.search_icon_label.grid(row=0, column=1, padx=(0, 0)) 
 
         # Create the entry field and place it next to the icon
-        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search", width=800, height=40, font=("Arial", 16),
-                             fg_color="#9DA6F9", border_color="#D1D1DF", text_color="white",
+        self.search_entry = ctk.CTkEntry(search_frame, placeholder_text="Search", width=750, height=40, font=("Arial", 16),
+                             fg_color="#B4BAFF", border_color="#D1D1DF", text_color="white",
                              placeholder_text_color="white", corner_radius=20, textvariable=self.search_var)
         self.search_entry.grid(row=0, column=2, padx=(10, 0)) 
         
-
 
         #  Announcement Section 
         self.announcement_label = ctk.CTkLabel(parent_frame, text="Announcement", font=("Arial", 22, "bold"), text_color="black")
@@ -396,7 +459,6 @@ class UserDashboard(ctk.CTk):
             card.grid(row=0, column=i, padx=10, pady=2)
        
 
-        
          # Fetch announcement items from DB and render them
         announcements = self.fetch_announcements_from_db()
         
@@ -541,8 +603,6 @@ class UserDashboard(ctk.CTk):
                 "image_url": image_path  # Correct image URL path
             })
         return products
-
-
     
     def create_category_card(self, parent, name, icon_filename):
         """Creates a single category card widget."""
@@ -562,65 +622,108 @@ class UserDashboard(ctk.CTk):
         name_label.pack()
         return card
     
-    
+        
     def create_item_card(self, parent, name, weight, price, image_filename, product_id=None):
-        """
-        Creates a single item card widget.
-        """
-        # 1. FIX: Increase card height (e.g., from 160 to 200) to allow space for all text.
-        card = ctk.CTkFrame(parent, width=160, height=200, fg_color="white", corner_radius=10, border_color="#E0DDF0", border_width=1)
+
+        card = ctk.CTkFrame(parent, width=160, height=230, fg_color="white",
+                            corner_radius=10, border_color="#E0DDF0", border_width=1)
         card.pack_propagate(False)
 
-        # Item image (use load_product_image which searches IMAGE_BASE_DIR)
-        item_image = self.load_product_image(image_filename or "", size=(100,100))
+        # ---------- IMAGE ----------
+        item_image = self.load_product_image(image_filename or "", size=(100, 100))
         if item_image:
             image_label = ctk.CTkLabel(card, image=item_image, text="")
             image_label.image = item_image
-            # Consider reducing pady to save vertical space
-            image_label.pack(pady=(5, 5)) 
+            image_label.pack(pady=5)
         else:
             image_label = ctk.CTkLabel(card, text="🛒", font=("Arial", 40))
-            image_label.pack(pady=(5, 5))
+            image_label.pack(pady=5)
 
-        # Name aligned to the left
-        name_label = ctk.CTkLabel(card, text=name, font=("Arial", 14, "bold"), text_color="black", anchor="w")
-        # 2. FIX: Reduce vertical padding (pady) around the name label
-        name_label.pack(fill="x", padx=10, pady=(0, 0)) 
+        # ---------- NAME ----------
+        name_label = ctk.CTkLabel(card, text=name, font=("Arial", 14, "bold"),
+                                text_color="black", anchor="w")
+        name_label.pack(fill="x", padx=10)
 
-        bottom_frame = ctk.CTkFrame(card, fg_color="transparent", height=40)
-        bottom_frame.pack(fill="x", padx=2, pady=(2, 2)) # Added a small pady at the bottom to ensure it's not glued to the edge
-        bottom_frame.pack_propagate(False)
+        # ---------- ORDER: qty_var FIRST ----------
+        qty_var = ctk.IntVar(value=1)
 
-        # Left side: weight and price in vertical layout
-        left_frame = ctk.CTkFrame(bottom_frame, fg_color="transparent")
-        left_frame.pack(side="left", anchor="w", padx=5) # Added padx to align better with the name label
-
-        weight_label = ctk.CTkLabel(left_frame, text=weight, font=("Arial", 12), text_color="#888888", anchor="w")
-        weight_label.pack(fill="x", padx=2, pady=(0, 0)) # Reduced vertical padding
-
-        # Ensure price is always displayed with 2 decimals
+        # ---------- ORDER: price_val SECOND ----------
         try:
             price_val = float(price)
             price_text = f"${price_val:,.2f}"
-        except Exception:
+        except:
             price_val = price
             price_text = str(price)
 
-        price_label = ctk.CTkLabel(left_frame, text=price_text, font=("Arial", 14, "bold"), text_color="black", anchor="w")
-        price_label.pack(side="left", anchor="e")
+        # -----------------------------------------------------------
+        # ROW 1 — ADD BUTTON (top right alone)
+        # -----------------------------------------------------------
+        add_row = ctk.CTkFrame(card, fg_color="transparent")
+        add_row.pack(fill="x", padx=5, pady=(0, 0))
 
-        add_to_cart_button = ctk.CTkButton(bottom_frame, text="➕", width=34, height=34, corner_radius=17,
-                                        fg_color="#FFFFFF", hover_color="#F0FFF0", text_color="black",
-                                        font=("Arial", 18, "bold"),
-                                        command=lambda pid=product_id, pname=name, pprice=price_val: self.on_add_to_cart(pid, pname, pprice))
-        add_to_cart_button.pack(side="right", anchor="e", padx=2)
+        add_btn = ctk.CTkButton(
+            add_row,
+            text="Add",
+            width=60,
+            height=30,
+            corner_radius=8,
+            fg_color="#FFFFFF",
+            hover_color="#F0FFF0",
+            text_color="black",
+            font=("Arial", 14, "bold"),
+            command=lambda pid=product_id, pname=name,
+                        pprice=price_val, qv=qty_var:
+                self.on_add_to_cart(pid, pname, pprice, qv.get())
+        )
+        add_btn.pack(side="right", pady=(0, 0))
+
+        # -----------------------------------------------------------
+        # ROW 2 — PRICE (left) + QUANTITY SELECTOR (right)
+        # -----------------------------------------------------------
+        price_qty_row = ctk.CTkFrame(card, fg_color="transparent")
+        price_qty_row.pack(fill="x", padx=5, pady=(0, 20))
+
+        # PRICE LABEL (left)
+        price_label = ctk.CTkLabel(
+            price_qty_row, text=price_text,
+            font=("Arial", 15, "bold"),
+            text_color="black"
+        )
+        price_label.pack(side="left", pady=(0,10))
+
+        # QUANTITY SELECTOR (right)
+        qty_frame = ctk.CTkFrame(price_qty_row, fg_color="#E0DDF0", corner_radius=8)
+        qty_frame.pack(side="right", pady=(0,10))
+
+        minus_btn = ctk.CTkButton(
+            qty_frame, text="-",
+            width=20, height=20,         # SMALLER SIZE
+            fg_color="white",
+            text_color="black",
+            corner_radius=6,
+            command=lambda qv=qty_var: self.decrease(qv)
+        )
+        minus_btn.pack(side="left", padx=(4, 2))
+
+        qty_lbl = ctk.CTkLabel(qty_frame, textvariable=qty_var, width=25)
+        qty_lbl.pack(side="left")
+
+        plus_btn = ctk.CTkButton(
+            qty_frame, text="+",
+            width=20, height=20,         # SMALLER SIZE
+            fg_color="white",
+            text_color="black",
+            corner_radius=6,
+            command=lambda qv=qty_var: self.increase(qv, 9999)
+        )
+        plus_btn.pack(side="left", padx=(2, 4))
 
         return card
-    
-    
-    def on_add_to_cart(self, product_id, product_name, price_text):
 
-        # Convert price
+
+    def on_add_to_cart(self, product_id, product_name, price_text, quantity):
+        print(f"Quantity being added: {quantity}")  # Debugging line
+
         try:
             price_val = float(str(price_text).replace("$", "").replace(",", ""))
         except:
@@ -636,7 +739,7 @@ class UserDashboard(ctk.CTk):
             conn = db.DB_Connection()
             cursor = conn.cursor()
 
-            #  Check if item already exists in active cart
+            # Check if item already exists in active cart
             cursor.execute("""
                 SELECT cart_id, quantity
                 FROM check_out
@@ -647,21 +750,21 @@ class UserDashboard(ctk.CTk):
 
             row = cursor.fetchone()
 
-            #  INSERT new row if item not found
+            # Insert new row if item not found
             if row is None:
                 cursor.execute("""
                     INSERT INTO check_out 
                     (product_id, customer_id, items, price, quantity, item_total)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (product_id, self.customer_id,
-                    product_name, price_val, 1, price_val))
+                    product_name, price_val, quantity, price_val * quantity))
 
-                print("Inserted into cart:", product_name)
+                print(f"Inserted {quantity} x {product_name} into cart.")  # Debugging line
 
-            #  UPDATE existing row
+            # Update existing row
             else:
                 cart_id, qty = row
-                new_qty = qty + 1
+                new_qty = qty + quantity
                 new_total = new_qty * price_val
 
                 cursor.execute("""
@@ -673,9 +776,12 @@ class UserDashboard(ctk.CTk):
                     AND total IS NULL
                 """, (new_qty, new_total, cart_id, self.customer_id))
 
-                print("Updated quantity in cart:", product_name)
+                print(f"Updated quantity in cart: {product_name} (New Quantity: {new_qty})")  # Debugging line
 
             conn.commit()
+
+            # After adding the item, update the cart icon count
+            self.update_cart_item_count()
 
         except Exception as e:
             print("Dashboard cart insert error:", e)
@@ -687,12 +793,24 @@ class UserDashboard(ctk.CTk):
             except:
                 pass
 
-        # Show small popup (optional)
-        try:
-            self.show_added_to_cart_toast(product_name)
-        except:
-            pass
-     
+            # Show small popup (optional)
+            try:
+                self.show_added_to_cart_toast(product_name)
+            except:
+                pass
+
+
+    def increase(self, qv, limit):
+        if qv.get() < limit:
+            qv.set(qv.get() + 1)
+        else:
+            print("Stock limit reached")
+
+    def decrease(self, qv):
+        if qv.get() > 1:
+            qv.set(qv.get() - 1)
+            
+            
         
     def show_added_to_cart_toast(self, product_name):
         

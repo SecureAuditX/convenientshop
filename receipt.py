@@ -1,4 +1,3 @@
-# receipt.py
 import tkinter as tk
 from tkinter import ttk
 from PIL import Image, ImageTk
@@ -65,6 +64,7 @@ class ReceiptWindow(tk.Toplevel):
         try:
             cust = db.fetchone("SELECT first_name, last_name FROM customers WHERE customer_id=%s",
                                (customer_id,))
+
             fname = cust.get("first_name", "") if cust else ""
             lname = cust.get("last_name", "") if cust else ""
             customer_name = f"{fname} {lname}".strip()
@@ -160,56 +160,56 @@ class ReceiptWindow(tk.Toplevel):
         total_amount = subtotal + shipping_fee
 
         # ---------------- RENDER EACH ITEM ----------------
+        
         for i, (qty, desc, price, total_item) in enumerate(items):
             ypad = 8
-            tk.Label(inner, text=str(qty), bg="#AFC0FF", font=("Arial", 12)).grid(row=i, column=0, sticky="w",
-                                                                                padx=20, pady=ypad)
-            tk.Label(inner, text=desc, bg="#AFC0FF", font=("Arial", 12, "italic")).grid(row=i, column=1, sticky="w",
-                                                                                      padx=20, pady=ypad)
-            tk.Label(inner, text=f"${price:.2f}", bg="#AFC0FF", font=("Arial", 12)).grid(row=i, column=2, sticky="e",
-                                                                                       padx=60, pady=ypad)
-            tk.Label(inner, text=f"${total_item:.2f}", bg="#AFC0FF", font=("Arial", 12, "bold")).grid(row=i, column=3,
-                                                                                                   sticky="e",
-                                                                                                   padx=60, pady=ypad)
 
-        # ---------------- BLACK LINE ----------------
-        black_line = tk.Frame(main, height=2, bg="black")
-        black_line.pack(fill="x", pady=(10, 10))
+            # FIXED: description now displays because column expands properly
+            inner.grid_columnconfigure(0, weight=0)
+            inner.grid_columnconfigure(1, weight=1)
+            inner.grid_columnconfigure(2, weight=0)
+            inner.grid_columnconfigure(3, weight=0)
 
-        # ---------------- SUMMARY AREA (RIGHT SIDE) ----------------
-        summary = tk.Frame(main, bg="#AFC0FF")
-        summary.pack(fill="x", pady=(5, 5))
+            tk.Label(inner, text=str(qty), bg="#AFC0FF", font=("Arial", 12)).grid(
+                row=i, column=0, sticky="w", padx=20, pady=ypad)
 
-        # Empty left filler
-        tk.Frame(summary, bg="#AFC0FF").pack(side="left", expand=True)
+            tk.Label(inner, text=desc, bg="#AFC0FF",
+                    font=("Arial", 12, "italic"), anchor="w").grid(
+                row=i, column=1, sticky="w", padx=20, pady=ypad)
 
-        # Right column
-        s = tk.Frame(summary, bg="#AFC0FF")
-        s.pack(side="right", padx=40)
+            tk.Label(inner, text=f"${price:.2f}", bg="#AFC0FF", font=("Arial", 12)).grid(
+                row=i, column=2, sticky="e", padx=60, pady=ypad)
 
-        tk.Label(s, text="Sub Total:", font=("Arial", 12), bg="#AFC0FF").grid(row=0, column=0, sticky="e", pady=5)
-        tk.Label(s, text=f"${subtotal:.2f}", font=("Arial", 12), bg="#AFC0FF").grid(row=0, column=1, sticky="e", pady=5)
+            tk.Label(inner, text=f"${total_item:.2f}", bg="#AFC0FF",
+                    font=("Arial", 12, "bold")).grid(
+                row=i, column=3, sticky="e", padx=60, pady=ypad)
 
-        tk.Label(s, text="Shipping:", font=("Arial", 12), bg="#AFC0FF").grid(row=1, column=0, sticky="e", pady=5)
-        tk.Label(s, text=f"${shipping_fee:.2f}", font=("Arial", 12), bg="#AFC0FF").grid(row=1, column=1, sticky="e", pady=5)
 
-        # TOTAL BOX (Option A – compact box)
-        total_box = tk.Frame(s, bg=TOTAL_BG, padx=10, pady=5)
+        # ---------------- TOTAL BOX (fixed text color ONLY) ----------------
+        summary_frame = tk.Frame(main, bg="#AFC0FF")
+        summary_frame.pack(fill="x", pady=(10, 10))
+
+        total_box = tk.Frame(summary_frame, bg=TOTAL_BG, padx=10, pady=5)
         total_box.grid(row=2, column=0, columnspan=2, sticky="e", pady=(10, 10))
 
+        # FIXED: TOTAL (USD) text is now BLACK
         tk.Label(total_box, text="TOTAL (USD)", font=("Arial", 12, "bold"),
-                 bg=TOTAL_BG, fg="#AFC0FF").pack(side="left", padx=8)
-        tk.Label(total_box, text=f"${total_amount:.2f}", font=("Arial", 12, "bold"),
-                 bg=TOTAL_BG, fg="#AFC0FF").pack(side="right", padx=8)
+                bg=TOTAL_BG, fg="black").pack(side="left", padx=8)
 
-        # ---------------- PAYMENT STATUS ----------------
+        tk.Label(total_box, text=f"${total_amount:.2f}", font=("Arial", 12, "bold"),
+                bg=TOTAL_BG, fg="white").pack(side="right", padx=8)
+
+
+        # ---------------- PAYMENT STATUS (fixed order) ----------------
         status = tk.Frame(main, bg="#AFC0FF")
         status.pack(fill="x")
 
+        # FIXED: Payment Status THEN Success (correct order)
         tk.Label(status, text="Payment Status:",
-                 font=("Arial", 12), bg="#AFC0FF").pack(side="right", padx=(0, 5))
+                font=("Arial", 12), bg="#AFC0FF").pack(side="left", padx=(20, 5))
+
         tk.Label(status, text="SUCCESS",
-                 font=("Arial", 14, "bold"), fg="red", bg="#AFC0FF").pack(side="right", padx=(10,0))
+                font=("Arial", 14, "bold"), fg="red", bg="#AFC0FF").pack(side="left")
 
         # Final center window
         self.update_idletasks()

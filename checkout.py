@@ -5,6 +5,7 @@ import mysql.connector
 import Payment
 from mysql.connector import Error
 import subprocess
+from Payment import Payment
 
 
 IMAGE_ROOT_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop" 
@@ -15,7 +16,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",  
-        password="SECRET",  
+        password="zxcvbnm",  
         port=3306,
         database="convenient_shop" 
     )
@@ -62,11 +63,13 @@ def cart_product_load_image(path, size=(50, 50)):
 
 
 class Checkout(ctk.CTkFrame): 
-    def __init__(self, parent_frame, customer_id, email):
+    def __init__(self, parent_frame, customer_id, email, cart_update_callback=None):
         # Checkout is the single main frame
         super().__init__(parent_frame, fg_color="#f8f9ff")
         self.customer_id = customer_id
         self.email = email
+        self.cart_update_callback = cart_update_callback 
+        self.master_frame = parent_frame
     
         
         # Configure grid for the Checkout frame (self)
@@ -82,7 +85,7 @@ class Checkout(ctk.CTkFrame):
         self.content_area.grid_rowconfigure(3, weight=1) # Row 3 (cart container) expands
         
         # Search Bar (Row 0)
-        self.search_bar = ctk.CTkEntry(self.content_area, placeholder_text="🔍Search",
+        self.search_bar = ctk.CTkEntry(self.content_area, placeholder_text="Search",
                                       font=("Arial", 16, "bold"), fg_color="#979EEC", corner_radius=20,
                                       width=850, height=40,
                                       justify="center", text_color="#F5F5F5")
@@ -103,21 +106,22 @@ class Checkout(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self.check_out_container, fg_color="transparent")
         self.header_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(10, 5))
         
-        # Header Labels (using placement logic within header_frame)
-        self.item_lbl=ctk.CTkLabel(self.header_frame,text="Items",font=("Arial",15,"italic","bold"))
-        self.item_lbl.pack(side="left", padx=(30, 0))
-        
-        self.desc_lbl=ctk.CTkLabel(self.header_frame,text="Description",font=("Arial",15,"bold","italic"))
-        self.desc_lbl.pack(side="left", padx=(100, 0))
-        
-        self.price_lbl=ctk.CTkLabel(self.header_frame,text="Price",font=("Arial",15,"italic","bold"))
-        self.price_lbl.pack(side="left", padx=(100, 0))
-        
-        self.qty_lbl=ctk.CTkLabel(self.header_frame,text="Quantity",font=("Arial",15,"italic","bold")) 
-        self.qty_lbl.pack(side="right", padx=(0, 180))
-        
-        self.item_total_lbl=ctk.CTkLabel(self.header_frame,text="Item Total",font=("Arial",15,"italic","bold"))
-        self.item_total_lbl.pack(side="right", padx=(0, 30)) 
+        # Header Labels (using grid for placement within header_frame)
+        self.item_lbl = ctk.CTkLabel(self.header_frame, text="Items", font=("Arial", 15, "italic", "bold"))
+        self.item_lbl.grid(row=0, column=0, padx=(30, 0), sticky="w")
+
+        self.desc_lbl = ctk.CTkLabel(self.header_frame, text="Description", font=("Arial", 15, "bold", "italic"))
+        self.desc_lbl.grid(row=0, column=1, padx=(100, 0), sticky="w")
+
+        self.price_lbl = ctk.CTkLabel(self.header_frame, text="Price", font=("Arial", 15, "italic", "bold"))
+        self.price_lbl.grid(row=0, column=2, padx=(100, 0), sticky="w")
+
+        self.qty_lbl = ctk.CTkLabel(self.header_frame, text="Quantity", font=("Arial", 15, "italic", "bold"))
+        self.qty_lbl.grid(row=0, column=3, padx=(0, 180), sticky="e")
+
+        self.item_total_lbl = ctk.CTkLabel(self.header_frame, text="Item Total", font=("Arial", 15, "italic", "bold"))
+        self.item_total_lbl.grid(row=0, column=4, padx=(0, 30), sticky="e")
+ 
         
         # Scrollable Frame for Products (Inside check_out_container - Row 1)
         self.checkout_product_container = ctk.CTkScrollableFrame(self.check_out_container, fg_color="#ECEFFA")
@@ -178,16 +182,22 @@ class Checkout(ctk.CTkFrame):
     
     
     def open_payment(self):
-        """Open the Payment.py file when the checkout button is clicked"""
+        """Switch to the Payment screen when the checkout button is clicked."""
         print("Button clicked, proceeding to Payment...")
-        
-        payment_script_path = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\Payment.py"
-        
-        if os.path.exists(payment_script_path):
-            print(f"Found the file at {payment_script_path}")
-            subprocess.Popen(["python", payment_script_path])  # Runs the script in the background
-        else:
-            print(f"Error: The file {payment_script_path} does not exist.")
+
+        # Assuming after payment you want to reset the cart count
+        self.reset_cart_after_checkout()
+
+        # Check if the Payment frame already exists, if not, create it
+        if not hasattr(self, 'payment_page'):  # Check if the Payment page already exists
+            self.payment_page = Payment(self.master, customer_id=self.customer_id, email=self.email, cart_update_callback=self.cart_update_callback)
+
+        # Hide the Checkout frame and show the Payment frame
+        self.grid_forget()  # Hide the current Checkout frame
+        self.payment_page.grid(row=0, column=0, sticky="nsew")  # Show the Payment frame
+
+        print("Payment frame is now visible.")
+
 
 
     
@@ -283,15 +293,15 @@ class Checkout(ctk.CTkFrame):
             cursor.execute("SELECT quantity, price FROM check_out WHERE cart_id=%s and customer_id=%s AND total IS NULL", (cart_id, self.customer_id))
             row = cursor.fetchone()
             if not row:
-               cursor.close()
-               conn.close()
-               return
+                cursor.close()
+                conn.close()
+                return
             
             qty, price = row
             new_qty = int(qty) + delta
         
             if new_qty <= 0:
-               cursor.execute("DELETE FROM check_out WHERE cart_id=%s and customer_id=%s AND total IS NULL", (cart_id, self.customer_id))
+                cursor.execute("DELETE FROM check_out WHERE cart_id=%s and customer_id=%s AND total IS NULL", (cart_id, self.customer_id))
             else:
                 # Use SQL calculation for item_total
                 cursor.execute("UPDATE check_out SET quantity=%s, item_total=price*%s WHERE cart_id=%s and customer_id=%s AND total IS NULL", (new_qty, new_qty, cart_id, self.customer_id))
@@ -299,23 +309,105 @@ class Checkout(ctk.CTkFrame):
             conn.commit()
             cursor.close()
             conn.close()
+
+            # After modifying the cart, update the cart item count in the cart icon
+            if self.cart_update_callback:
+                self.cart_update_callback()  # Call the callback to update the cart count
+        
         except Exception as e:
             print(f"Quantity update error: {e}")
-        
+
+        # Reload the cart to reflect the changes
         self.load_cart()
+
+
         
-    def clear_cart(self):
-        # Deletes all active cart items for the customer
+    def update_cart_item_count(self):
+        """
+        Updates the number of items in the cart by checking the check_out table.
+        """
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
+
+            cursor.execute(""" 
+                SELECT SUM(quantity) AS total_items
+                FROM check_out
+                WHERE customer_id = %s AND total IS NULL
+            """, (self.customer_id,))
+
+            row = cursor.fetchone()
+
+            total_items = row[0] if row[0] else 0  # If no items, set total_items to 0
+
+            # Update the cart icon's label with the number of items
+            self.item_count_label.configure(text=f"Items: {total_items}")
+
+        except Exception as e:
+            print(f"Error updating cart item count: {e}")
+
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+
+    def reset_cart_after_checkout(self):
+        """
+        Resets the cart count to 0 after checkout is completed.
+        This could be called after a successful payment.
+        """
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Set the total for the items in the checkout table
+            cursor.execute("""
+                UPDATE check_out
+                SET total = item_total
+                WHERE customer_id = %s
+                AND total IS NULL
+            """, (self.customer_id,))
+
+            conn.commit()
+
+            # After checkout, update the cart item count to 0
+            self.update_cart_item_count()
+
+        except Exception as e:
+            print(f"Error resetting cart after checkout: {e}")
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+
+        
+    def clear_cart(self):
+        # Deletes all active cart items for the customer in the database
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+            
+            # Delete items from the cart where total is NULL (i.e., active cart items)
             cursor.execute("DELETE FROM check_out WHERE customer_id=%s AND total IS NULL", (self.customer_id,))
             conn.commit()
+
             cursor.close()
             conn.close()
+            
+            # Update the cart item count in the cart icon (main_content_area)
+            if self.cart_update_callback:
+                self.cart_update_callback()  # This will update the cart item count to 0 in the cart icon
+
         except Exception as e:
             print(f"Clear Cart error: {e}")
+        
+        # Reload the cart to reflect the changes (it should now show an empty cart)
         self.load_cart()
+
     
 # --- Application Execution ---
 

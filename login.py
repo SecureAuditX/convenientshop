@@ -11,8 +11,8 @@ import os
 
 # Importing the db connection from db_file.py
 # db = Database()
-# connection = db.DB_Connection()
-# MAX_LOGIN_ATTEMPTS = 3
+connection = db.DB_Connection()
+MAX_LOGIN_ATTEMPTS = 3
 
 class LoginPage(ctk.CTk):
 

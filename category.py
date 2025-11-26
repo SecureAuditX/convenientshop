@@ -24,7 +24,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",  
-        password="SECRET",  
+        password="zxcvbnm",  
         port=3306,
         database="convenient_shop" 
     )
@@ -83,11 +83,12 @@ def product_load_image(path, size=(60, 60)):
 # --- Category Class ---
 
 class Category(ctk.CTkScrollableFrame): 
-    def __init__(self, parent_frame, card_colors, get_all_categories_func, category_load_image_func, get_products_by_category_func, customer_id, email):
+    def __init__(self, parent_frame, card_colors, get_all_categories_func, category_load_image_func, get_products_by_category_func, customer_id, email, cart_update_callback):
         # Category is now a single CTkScrollableFrame
         super().__init__(parent_frame, fg_color="#f8f9ff")
         self.customer_id = customer_id
         self.email = email
+        self.cart_update_callback = cart_update_callback
         
         # Configure main grid: 1 column for content alignment
         self.grid_columnconfigure(0, weight=1)
@@ -99,9 +100,9 @@ class Category(ctk.CTkScrollableFrame):
         self.Get_products_by_category = get_products_by_category_func
         
         # Search Bar (Row 0)
-        self.search_bar = ctk.CTkEntry(self, placeholder_text="🔍Search",
-                                     font=("Arial", 16, "bold"), fg_color="#979EEC", corner_radius=27,
-                                     width=850, height=55,
+        self.search_bar = ctk.CTkEntry(self, placeholder_text="Search",
+                                     font=("Arial", 16, "bold"), fg_color="#B4BAFF", corner_radius=27,
+                                     width=850, height=40,
                                      justify="center", text_color="#F5F5F5")
         self.search_bar.grid(padx=40, pady=40, column=0, row=0, sticky="ew")
         
@@ -344,7 +345,7 @@ class Category(ctk.CTkScrollableFrame):
                 card,
                 text="Add to Cart 🛒",
                 width=80,
-                height=200,
+                height=40,
                 fg_color="#A4A4EB",
                 text_color="white",
                 corner_radius=12,
@@ -411,6 +412,10 @@ class Category(ctk.CTkScrollableFrame):
 
             conn.commit()
             self.show_message(f"Added {qty} x {name} to cart!", "green")
+            
+            # After modifying the cart, update the cart item count
+            if self.cart_update_callback:
+                self.cart_update_callback()  # Call the callback to update the cart count
         
         except Exception as e:
             print(f"Cart Update error: {e}")
@@ -421,7 +426,38 @@ class Category(ctk.CTkScrollableFrame):
             except:
                 pass
 
-            
+    
+    def update_cart_item_count(self):
+        """
+        Updates the number of items in the cart by checking the check_out table.
+        """
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            cursor.execute("""
+                SELECT SUM(quantity) AS total_items
+                FROM check_out
+                WHERE customer_id = %s AND total IS NULL
+            """, (self.customer_id,))
+
+            row = cursor.fetchone()
+
+            total_items = row[0] if row[0] else 0  # If no items, set total_items to 0
+
+            # Update the cart icon's label with the number of items
+            self.item_count_label.configure(text=str(total_items))
+
+        except Exception as e:
+            print(f"Error updating cart item count: {e}")
+
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+         
              
     def load_image(self, image_path):
         try:

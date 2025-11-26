@@ -15,7 +15,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",  
-        password="SECRET",  
+        password="zxcvbnm",  
         port=3306,
         database="convenient_shop" 
     )
@@ -48,18 +48,17 @@ def get_cart_items(customer_id):
         return []
 
 class Payment(ctk.CTkFrame):
-    def __init__(self, parent_frame, customer_id, email):
+    def __init__(self, parent_frame, customer_id, email, cart_update_callback=None):
         # Payment is the single main frame
         super().__init__(parent_frame, fg_color="#f8f9ff")
         self.customer_id = customer_id
         self.email = email
+        self.cart_update_callback = cart_update_callback
         
         # Configure grid for the Payment frame (self)
         self.grid_columnconfigure(0, weight=1) 
         self.grid_rowconfigure(0, weight=1)
         
-        # Content Area - This replaces self.main_frame and self.content_frame
-        # It takes up the entire area of the Payment frame and gives the white background
         self.content_area = ctk.CTkFrame(self, fg_color="white", corner_radius=10)
         self.content_area.grid(row=0, column=0, sticky="nsew", padx=10, pady=10)
         
@@ -70,7 +69,7 @@ class Payment(ctk.CTkFrame):
 
         # Search Bar (Row 0, Column 0/1)
         self.search_bar = ctk.CTkEntry(self.content_area, placeholder_text="🔍Search",
-                                       font=("Arial", 16, "bold"), fg_color="#979EEC", corner_radius=20,
+                                       font=("Arial", 16, "bold"), fg_color="#B4BAFF", corner_radius=20,
                                        height=40, justify="center", text_color="#F5F5F5")
         self.search_bar.grid(padx=40, pady=40, column=0, columnspan=2, row=0, sticky="ew")
 
@@ -234,7 +233,7 @@ class Payment(ctk.CTkFrame):
         self.total_val.grid(row=3, column=1, padx=(0, 20), pady=(20, 20), sticky="e")
         
         # Save and Pay Button
-        save_pay_btn = ctk.CTkButton(self.cart_bill_container, text="Save and Pay", text_color="black", fg_color="#727AE0", font=("Arial", 18), corner_radius=20, width=80, height=37, hover_color="#9197EB", command=self.on_save_and_pay)
+        save_pay_btn = ctk.CTkButton(self.cart_bill_container, text="Pay", text_color="black", fg_color="#727AE0", font=("Arial", 16), corner_radius=20, width=150, height=37, hover_color="#9197EB", command=self.on_save_and_pay)
         save_pay_btn.grid(row=4, column=0, columnspan=2, padx=40, pady=(250, 20))
 
         # Initial total update
@@ -368,7 +367,7 @@ class Payment(ctk.CTkFrame):
         self.after(2000, popup.destroy) 
         
     def on_save_and_pay(self):
-        #  Validate Form
+        # Validate Form
         ok, data_or_msg = self.validate_payment_form()
         if not ok:
             self.show_message(data_or_msg, "red")
@@ -376,13 +375,13 @@ class Payment(ctk.CTkFrame):
 
         data = data_or_msg
 
-        #  Get Cart Items
+        # Get Cart Items
         rows = get_cart_items(self.customer_id)
         if not rows:
             self.show_message("Your cart is empty.", "red")
             return
 
-        #  Calculate Totals (redundant check, but ensures data integrity before final steps)
+        # Calculate Totals (redundant check, but ensures data integrity before final steps)
         subtotal = 0.0
         for (_, _, _, price, qty, item_total, _) in rows:
             price = float(price)
@@ -393,7 +392,7 @@ class Payment(ctk.CTkFrame):
         shipping = 6.10 if subtotal > 0 else 0.00
         total = subtotal + shipping
 
-        # 4. Database Transaction
+        # Database Transaction
         conn = None
         cursor = None
         try:
@@ -480,7 +479,7 @@ class Payment(ctk.CTkFrame):
                     shipping_fee = %s,
                     total = %s
                 WHERE customer_id = %s
-                  AND total IS NULL
+                AND total IS NULL
                 """,
                 (subtotal, shipping, total, self.customer_id)
             )
@@ -499,13 +498,49 @@ class Payment(ctk.CTkFrame):
             if conn:
                 conn.close()
 
-        #  Final UI Update
+        # Final UI Update
         self.update_totals() 
         self.show_message(f"Payment successful! Order #{order_no}", "green")
+        
+        # Call cart_update_callback() to update the cart item count
+        if self.cart_update_callback:
+            self.cart_update_callback()  # This will update the cart item count to 0
         
         # --- Show Receipt After Successful Payment ---
         from receipt import ReceiptWindow
         ReceiptWindow(order_no, self.customer_id)
+
+        
+    def reset_cart_after_checkout(self):
+        """
+        Resets the cart count to 0 after checkout is completed.
+        """
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor()
+
+            # Set the total for the items in the checkout table
+            cursor.execute("""
+                UPDATE check_out
+                SET total = item_total
+                WHERE customer_id = %s
+                AND total IS NULL
+            """, (self.customer_id,))
+
+            conn.commit()
+
+            # After checkout, update the cart item count to 0
+            self.update_cart_item_count()
+
+        except Exception as e:
+            print(f"Error resetting cart after checkout: {e}")
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+
 
 
 # The redundant load_image function from the original code is removed as it's unused.

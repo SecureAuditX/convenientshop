@@ -30,7 +30,7 @@ class App(ctk.CTkFrame):
             placeholder_text="Search",
             height=35,
             corner_radius=15,
-            fg_color="#d8d4f4",
+            fg_color="#B4BAFF",
             text_color="black",
             justify="center",
             font=("Arial", 14)
@@ -58,7 +58,7 @@ class App(ctk.CTkFrame):
         self.orders_frame.grid_columnconfigure(0, weight=1)
 
         # Define consistent column widths and headers
-        self.column_widths = [100, 250, 50, 150, 180, 80]
+        self.column_widths = [150, 150, 150, 250, 250, 250]
         self.headers = ["ORDER NO", "ADDRESS", "QTY", "DELIVERY STATUS", "TIME", "TOTAL"]
 
         # ----------------------------------------------------
@@ -88,7 +88,6 @@ class App(ctk.CTkFrame):
         """Load orders from the order_history table in the database for the specific customer"""
         try:
             if self.customer_id:
-                print(f"[DEBUG] self.customer_id = {self.customer_id} ({type(self.customer_id)})")
                 # SQL query to fetch order history data for specific customer
                 query = """
                 SELECT 
@@ -105,7 +104,6 @@ class App(ctk.CTkFrame):
                 
                 # Execute query with customer_id parameter
                 results = db.fetchall(query, (self.customer_id,))
-                print(f"[DEBUG] Fetched results: {results}")  # Debugging query result
             else:
                 # SQL query to fetch all order history data
                 query = """
@@ -122,7 +120,6 @@ class App(ctk.CTkFrame):
                 
                 # Execute query without parameters
                 results = db.fetchall(query)
-                print(f"Fetched results: {results}")  # Debugging query result
             
             # Check if results are empty
             if not results:
@@ -134,7 +131,6 @@ class App(ctk.CTkFrame):
             
             # Process each row from the database
             for row in results:
-                print(f"Processing row: {row}")  # Debug print to see the row data
                 
                 order_no = f"#{row['order_no']}" if row['order_no'] else "#N/A"
                 address = row['address'] or "No address"
@@ -147,7 +143,7 @@ class App(ctk.CTkFrame):
                 # Format total as currency, ensuring it handles Decimal properly
                 total_str = f"${float(row['total']):.2f}" if row['total'] is not None else "$0.00"
                 
-                print(f"Formatted order: {order_no}, {address}, {quantity}, {delivery_status}, {time_str}, {total_str}")  # Debug print
+                #print(f"Formatted order: {order_no}, {address}, {quantity}, {delivery_status}, {time_str}, {total_str}")  # Debug print
                 
                 # Add to orders list
                 self.orders.append([
@@ -165,7 +161,6 @@ class App(ctk.CTkFrame):
 
     def display_orders(self):
         """Generates and displays the individual order cards."""
-        
     
         widgets_to_destroy = []
         for widget in self.orders_frame.winfo_children():
