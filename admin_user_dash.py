@@ -407,16 +407,8 @@ class UserDashboard(ctk.CTk):
             status = status_combo.get().lower()
             
             
-            if not self.is_secure_password(self,password):
-                self.show_message(
-                    title="Error",
-                    message="Password must be ≥ 8 characters and include:\n"
-                            "- Uppercase letter\n"
-                            "- Lowercase letter\n"
-                            "- Number\n"
-                            "- Special symbol (@$!%*#?&)",
-                    icon="cancel"
-                )
+            if not self.is_secure_password(password):
+                self.show_message("Password must be ≥ 8 chars, include A-Z, a-z, 0-9, and symbol", "red")
                 return 
 
             
@@ -466,7 +458,7 @@ class UserDashboard(ctk.CTk):
 
         ctk.CTkButton(dialog, text="Save User", command=save_user, fg_color="black").pack(pady=20)
     
-    def is_secure_password(password):
+    def is_secure_password(self,password):
             return (
                 len(password) >= 8 and
                 re.search(r"[A-Z]", password) and
