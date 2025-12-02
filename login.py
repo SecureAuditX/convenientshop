@@ -1,4 +1,3 @@
-from db_file import Database
 from db_file import db
 import customtkinter as ctk
 from PIL import Image, ImageTk
@@ -9,8 +8,6 @@ import subprocess
 import sys
 import os
 
-# Importing the db connection from db_file.py
-# db = Database()
 connection = db.DB_Connection()
 MAX_LOGIN_ATTEMPTS = 3
 
@@ -142,13 +139,14 @@ class LoginPage(ctk.CTk):
         cursor.close()
     
     # Role based access control
-    def open_admin_dashboard(self):
+    def open_admin_dashboard(self, customer_id, email):
        """Placeholder for opening the Admin dashboard"""
        self.status_label.configure(text="Redirecting to Admin Dashboard...", text_color="green")
        
        self.destroy()
        import admin_dashboard
-       admin_dashboard.AdminDashboard().mainloop()
+       admin_app = admin_dashboard.AdminDashboard(customer_id=customer_id, email=email)
+       admin_app.mainloop()
     
     def open_user_dashboard(self, customer_id, email):
         """Open customer dashboard with correct customer_id"""
@@ -171,7 +169,6 @@ class LoginPage(ctk.CTk):
 
         cursor = connection.cursor(dictionary=True)
 
-        # FIXED: Now retrieving customer_id
         cursor.execute("""
             SELECT customer_id, password, error_login_attempt, is_locked, role
             FROM login
@@ -210,7 +207,7 @@ class LoginPage(ctk.CTk):
                 self.update_login_attempts(hashed_input_email, 0, 0)
 
             if user_role.lower() == "admin":
-                self.open_admin_dashboard()
+                self.open_admin_dashboard(customer_id=customer_id, email=input_email )
             else:
                 #  pass customer_id to dashboard
                 self.logged_in_email = input_email    # REAL EMAIL
@@ -236,8 +233,6 @@ class LoginPage(ctk.CTk):
                 text=f"Invalid Credentials. {remaining} attempts remaining."
             )
 
-
-    
     # Sign up page 
     def open_signup(self, event = None):
         """Close login page and open sign up when "Register" link is clicked"""

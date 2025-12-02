@@ -2,9 +2,13 @@ import customtkinter as ctk
 from PIL import Image, ImageTk
 from admin_announcement import AnnouncementUI
 from admin_setting import AdminSettingsApp 
+from admin_finance import FinanceApp 
+from admin_reports import ReportApp 
+from admin_dash import Dashboard 
+from admin_stock import Stock
+from admin_users import Users
 import os
 
-# Database connection is handled by the global 'db' instance from db_file
 
 def image_path_join(*parts):
     """Return normalize absolute path for images"""
@@ -93,44 +97,44 @@ class AdminDashboard(ctk.CTk):
         self.finance_button.grid(row=4, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 4
         
         self.report_button = ctk.CTkButton(self.sidebar_frame, text="Report", 
-                                        fg_color="transparent", text_color="black", 
-                                        hover_color="#D7D2F4", font=("Arial", 16), 
-                                        anchor="w", image=self.load_icon("report.png", 20),
-                                        compound="left", command=self.show_report_content,
-                                        width=150, height=50)
+                                          fg_color="transparent", text_color="black", 
+                                          hover_color="#D7D2F4", font=("Arial", 16), 
+                                          anchor="w", image=self.load_icon("report.png", 20),
+                                          compound="left", command=self.show_report_content, # <-- Command updated
+                                          width=150, height=50)
         self.report_button.grid(row=5, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 5
         
         self.announcement_button = ctk.CTkButton(self.sidebar_frame, text="Announcement", 
-                                             fg_color="transparent", text_color="black",
-                                             hover_color="#D7D2F4", font=("Arial", 16), 
-                                             anchor="w", image=self.load_icon("announcement.png", 20), 
-                                             compound="left", command=self.show_announcement_content,
-                                             width=150, height=50)
+                                              fg_color="transparent", text_color="black",
+                                              hover_color="#D7D2F4", font=("Arial", 16), 
+                                              anchor="w", image=self.load_icon("announcement.png", 20), 
+                                              compound="left", command=self.show_announcement_content,
+                                              width=150, height=50)
         self.announcement_button.grid(row=6, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 6
 
         self.user_button = ctk.CTkButton(self.sidebar_frame, text="Users", 
-                                             fg_color="transparent", text_color="black",
-                                             hover_color="#D7D2F4", font=("Arial", 16), 
-                                             anchor="w", image=self.load_icon("users.png", 20), 
-                                             compound="left", command=self.show_users_content,
-                                             width=150, height=50)
+                                              fg_color="transparent", text_color="black",
+                                              hover_color="#D7D2F4", font=("Arial", 16), 
+                                              anchor="w", image=self.load_icon("users.png", 20), 
+                                              compound="left", command=self.show_users_content,
+                                              width=150, height=50)
         self.user_button.grid(row=7, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 7
 
         self.setting_button = ctk.CTkButton(self.sidebar_frame, text="Setting", 
-                                             fg_color="transparent", text_color="black",
-                                             hover_color="#D7D2F4", font=("Arial", 16), 
-                                             anchor="w", image=self.load_icon("setting.png", 20), 
-                                             compound="left", command=self.show_setting_content,
-                                             width=150, height=50)
+                                              fg_color="transparent", text_color="black",
+                                              hover_color="#D7D2F4", font=("Arial", 16), 
+                                              anchor="w", image=self.load_icon("setting.png", 20), 
+                                              compound="left", command=self.show_setting_content,
+                                              width=150, height=50)
         self.setting_button.grid(row=8, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 8
         
         #  Logout Button 
         self.logout_button = ctk.CTkButton(self.sidebar_frame, text="Logout", 
-                                         fg_color="transparent", text_color="black",
-                                         hover_color="#D7D2F4", font=("Arial", 16), 
-                                         anchor="w", image=self.load_icon("exit.png", 20), 
-                                         compound="left", command=self.logout,
-                                         width=150, height=50)
+                                          fg_color="transparent", text_color="black",
+                                          hover_color="#D7D2F4", font=("Arial", 16), 
+                                          anchor="w", image=self.load_icon("exit.png", 20), 
+                                          compound="left", command=self.logout,
+                                          width=150, height=50)
         self.logout_button.grid(row=15, column=0, sticky="ew", pady=(10, 20), padx=10)
         
         
@@ -145,7 +149,12 @@ class AdminDashboard(ctk.CTk):
         self.dashboard_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
         self.stock_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
         self.finance_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
+        
+        # CHANGE 2: Configure the report frame for expansion
         self.report_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
+        self.report_content_frame.grid_columnconfigure(0, weight=1)
+        self.report_content_frame.grid_rowconfigure(0, weight=1)
+        
         self.announcement_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
         self.users_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
         self.setting_content_frame = ctk.CTkFrame(self.main_content_area, fg_color="transparent")
@@ -190,77 +199,97 @@ class AdminDashboard(ctk.CTk):
             else:
                 button.configure(fg_color="transparent")
                 
-    # Content Display Functions 
     
     def show_dashboard_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.dashboard_button)
-        for w in self.dashboard_content_frame.winfo_children(): w.destroy()
+        for w in self.dashboard_content_frame.winfo_children(): 
+            w.destroy()
         self.dashboard_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        ctk.CTkLabel(self.dashboard_content_frame, text="Admin Home Dashboard Content", font=("Arial", 24, "bold"), text_color="black").pack(padx=10, pady=10)
-        
+        dashboard_app = Dashboard(
+            customer_id=self.customer_id, 
+            email=self.email,
+            master=self.dashboard_content_frame 
+        )
+        dashboard_app.pack(fill="both", expand=True) 
+
     def show_stock_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.stock_button) 
-        for w in self.stock_content_frame.winfo_children(): w.destroy() 
+        for w in self.stock_content_frame.winfo_children(): 
+            w.destroy()
         self.stock_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        ctk.CTkLabel(self.stock_content_frame, text="Stock Management Content", font=("Arial", 24, "bold"), text_color="black").pack(padx=10, pady=10)
+        self.stock_content_frame.grid_rowconfigure(0, weight=1)
+        self.stock_content_frame.grid_columnconfigure(0, weight=1)
+        stock_ui = Stock(
+            parent_frame=self.stock_content_frame,
+            customer_id=self.customer_id,
+            email=self.email
+        )
+        stock_ui.grid(row=0, column=0, sticky="nsew") 
         
     def show_finance_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.finance_button)
-        for w in self.finance_content_frame.winfo_children(): w.destroy()
+        for w in self.finance_content_frame.winfo_children(): 
+            w.destroy()
         self.finance_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        ctk.CTkLabel(self.finance_content_frame, text="Finance Content", font=("Arial", 24, "bold"), text_color="black").pack(padx=10, pady=10)
-        
-    def show_report_content(self):
+        self.finance_content_frame.grid_columnconfigure(0, weight=1)
+        self.finance_content_frame.grid_rowconfigure(0, weight=1)
+        try:
+            finance_app = FinanceApp(master=self.finance_content_frame)
+            finance_app.grid(row=0, column=0, sticky="nsew") # Grid to fill the frame
+        except NameError:
+            ctk.CTkLabel(self.finance_content_frame, text="Error: FinanceApp not defined or imported.", font=("Arial", 20), text_color="red").pack(padx=20, pady=20)
+
+
+    def show_report_content(self): 
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.report_button)
-        for w in self.report_content_frame.winfo_children(): w.destroy() 
+        for w in self.report_content_frame.winfo_children(): 
+            w.destroy()
         self.report_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        ctk.CTkLabel(self.report_content_frame, text="Report Content", font=("Arial", 24, "bold"), text_color="black").pack(padx=10, pady=10)
-        
+        try:
+            report_app = ReportApp(master=self.report_content_frame)
+            report_app.grid(row=0, column=0, sticky="nsew")
+        except NameError:
+            ctk.CTkLabel(self.report_content_frame, text="Error: ReportApp not defined or imported.", font=("Arial", 20), text_color="red").pack(padx=20, pady=20)
+
+
     def show_announcement_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.announcement_button)
-        
-        # Clear children of the dedicated frame
         for w in self.announcement_content_frame.winfo_children():
             w.destroy()
-
-        # Grid the dedicated frame into the main content area
         self.announcement_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        # Instantiate and display the new AnnouncementUI inside the dedicated frame
-        # NOTE: If AnnouncementUI is a CTkFrame, we use pack/grid inside the parent frame.
         announcement_ui = AnnouncementUI(self.announcement_content_frame) 
         announcement_ui.pack(fill="both", expand=True) 
         
     def show_users_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.user_button)
-        for w in self.users_content_frame.winfo_children(): w.destroy() 
+        for w in self.users_content_frame.winfo_children(): 
+            w.destroy()
         self.users_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        ctk.CTkLabel(self.users_content_frame, text="Users Management Content", font=("Arial", 24, "bold"), text_color="black").pack(padx=10, pady=10)
+        users_ui = Users(
+            parent_frame=self.users_content_frame, 
+            customer_id=self.customer_id, 
+            email=self.email 
+        )
+        users_ui.grid(row=0, column=0, sticky="nsew") 
         
     def show_setting_content(self):
         self.hide_all_content_frames()
         self.set_sidebar_button_active(self.setting_button)
-        
-        # 1. Clear existing content in the dedicated frame
         for w in self.setting_content_frame.winfo_children(): 
             w.destroy()
-            
-        # 2. Grid the dedicated frame into the main content area
         self.setting_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        # 3. Instantiate and pack the AdminSettingsApp into the dedicated frame
         settings_app = AdminSettingsApp(
             parent_frame=self.setting_content_frame, 
             customer_id=self.customer_id, 
             email=self.email 
         )
-        settings_app.pack(fill="both", expand=True) # Use pack for AdminSettingsApp
+        settings_app.pack(fill="both", expand=True) 
         
     def logout(self):
         #Handles user logout.
@@ -268,7 +297,8 @@ class AdminDashboard(ctk.CTk):
         import login
         login_app = login.LoginPage()
         login_app.mainloop() 
-    
+        
+        
 if __name__ == '__main__':
     # Placeholder values for demonstration
     app = AdminDashboard(customer_id=None, email="admin@shop.com") 

@@ -1,19 +1,17 @@
-from db_file import db
 import customtkinter as ctk
 import os
 import re
-from PIL import Image,ImageTk
+from PIL import Image, ImageTk
 import mysql.connector
-from mysql.connector import Error
 
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
-        user="avnadmin",  
-        password="AVNS_2jwXFZ6i4VHBaoWwW6u",  
-        port = 24122,
-        database="conv_shop_db" 
+        host="localhost",
+        user="root",  
+        password="SECRET",  
+        port = 3306,
+        database="convenient_shop" 
     )
 
 def image_path_join(*parts):
@@ -28,148 +26,21 @@ def image_path_join(*parts):
     base = os.path.dirname(__file__)
     return os.path.normpath(os.path.join(base, *parts))
 
-IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\images"
-    
+IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images"
 
-class Stock(ctk.CTk): 
-    def __init__(self, customer_id, email):
-        super().__init__()
+class Stock(ctk.CTkFrame): 
+    def __init__(self, parent_frame, customer_id, email):
+        super().__init__(parent_frame, fg_color="white", corner_radius=15)
         self.customer_id = customer_id
         self.email = email
-       
-        self.title("Admin Dashbaord Management")
-        self.geometry("1200x800")
-        self.resizable(True, True)
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
-        
-      
-        self.grid_columnconfigure(0, weight=0)
-        self.grid_columnconfigure(1, weight=1)
-        self.grid_rowconfigure(0, weight=1)
-        
-        self.sidebar_frame = ctk.CTkFrame(self, fg_color="#E0DDF0", corner_radius=10) 
-        self.sidebar_frame.grid(row=0, column=0, sticky="nsew")
-        # increase number of rows
-        for i in range(0, 12):
-            self.sidebar_frame.grid_rowconfigure(i, weight=0)  
-        self.sidebar_frame.grid_rowconfigure(11, weight=1) 
-        
-        # User Profile
-        self.profile_frame = ctk.CTkFrame(self.sidebar_frame, fg_color="transparent")
-        self.profile_frame.grid(row=0, column=0, padx=10, pady=20, sticky="ew")
-        
-        # Load profile icon
-        try:
-            profile_icon_path = image_path_join(os.path.dirname(__file__), "profile.png")
-            if not os.path.exists(profile_icon_path):
-                profile_icon_path = os.path.join(IMAGE_BASE_DIR, "profile.png")
-            profile_image = Image.open(profile_icon_path).resize((80, 80), Image.LANCZOS)
-            self.profile_ctk_image = ImageTk.PhotoImage(profile_image)
-            
-            self.profile_label = ctk.CTkLabel(self.profile_frame, image=self.profile_ctk_image, text="")
-            self.profile_label.grid(row=0, column=0, padx=10, pady=5)
-        
-        except Exception:
-            # Gracefull fallback
-            self.profile_label = ctk.CTkLabel(self.profile_frame, text="👤", font=("Arial", 40))
-            self.profile_label.grid(row=0, column=0, padx=10, pady=5)
-            
-        self.username_label = ctk.CTkLabel(self.profile_frame, text="Admin Dashboard", font=("Arial", 14, "bold"), text_color="black")
-        self.username_label.grid(row=1, column=0, padx=10, pady=5)
-        
-        self.dashboard_button = ctk.CTkButton(self.sidebar_frame, text="Home",
-                                              fg_color="transparent", text_color="black",
-                                              hover_color="#D7D2F4", font=("Arial", 16, "bold"),
-                                              anchor="w", image=self.load_icon("home.png", 20),
-                                              compound="left", command=self.show_dashboard_content,
-                                              width=150, height=50) 
-        self.dashboard_button.grid(row=2, column=0, padx=10, pady=8, sticky="ew")   
     
-        self.stock_button = ctk.CTkButton(self.sidebar_frame, text="Stock Management", 
-                                               fg_color="transparent", text_color="black",
-                                               hover_color="#D7D2F4", font=("Arial", 16), 
-                                               anchor="w", image=self.load_icon("stock.png", 20), 
-                                               compound="left", command=self.show_stock_content,
-                                               width=150, height=50)
-        self.stock_button.grid(row=3, column=0, sticky="ew", pady=8, padx=10) 
-        
-        self.finance_button = ctk.CTkButton(self.sidebar_frame, text="Finance", 
-                                               fg_color="transparent", text_color="black",
-                                               hover_color="#D7D2F4", font=("Arial", 16), 
-                                               anchor="w", image=self.load_icon("finance.png", 20), 
-                                               compound="left", command=self.show_finance_content,
-                                               width=150, height=50)
-        self.finance_button.grid(row=3, column=0, sticky="ew", pady=8, padx=10)
-        
-        self.report_button = ctk.CTkButton(self.sidebar_frame, text="Report", 
-                                             fg_color="transparent", text_color="black", 
-                                             hover_color="#D7D2F4", font=("Arial", 16), 
-                                             anchor="w", image=self.load_icon("report.png", 20),
-                                             compound="left", command=self.show_report_content,
-                                             width=150, height=50)
-        self.report_button.grid(row =4, column=0, sticky="ew", pady=8, padx=10)
-        
-        self.announcement_button = ctk.CTkButton(self.sidebar_frame, text="Announcement", 
-                                            fg_color="transparent", text_color="black",
-                                            hover_color="#D7D2F4", font=("Arial", 16), 
-                                            anchor="w", image=self.load_icon("announcement.png", 20), 
-                                            compound="left", command=self.show_announcement_content,
-                                            width=150, height=50)
-        self.announcement_button.grid(row=5, column=0, sticky="ew", pady=8, padx=10)
-
-        self.user_button = ctk.CTkButton(self.sidebar_frame, text="Users", 
-                                            fg_color="transparent", text_color="black",
-                                            hover_color="#D7D2F4", font=("Arial", 16), 
-                                            anchor="w", image=self.load_icon("users.png", 20), 
-                                            compound="left", command=self.show_users_content,
-                                            width=150, height=50)
-        self.user_button.grid(row=6, column=0, sticky="ew", pady=8, padx=10)
-
-        self.setting_button = ctk.CTkButton(self.sidebar_frame, text="Setting", 
-                                            fg_color="transparent", text_color="black",
-                                            hover_color="#D7D2F4", font=("Arial", 16), 
-                                            anchor="w", image=self.load_icon("setting.png", 20), 
-                                            compound="left", command=self.show_setting_content,
-                                            width=150, height=50)
-        self.setting_button.grid(row=7, column=0, sticky="ew", pady=8, padx=10)   
-        
-        #  Logout Button 
-        self.logout_button = ctk.CTkButton(self.sidebar_frame, text="Logout", 
-                                           fg_color="transparent", text_color="black",
-                                           hover_color="#D7D2F4", font=("Arial", 16), 
-                                           anchor="w", image=self.load_icon("exit.png", 20), 
-                                           compound="left", command=self.logout,
-                                           width=150, height=50)
-        self.logout_button.grid(row=15, column=0, sticky="ew", pady=(10, 20), padx=10)
-        
-        self.main_frame=ctk.CTkFrame(self,fg_color="#F5F5F5",corner_radius=10)
-        self.main_frame.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
-        self.main_frame.grid_columnconfigure(0,weight=1)
-        self.main_frame.grid_rowconfigure(0,weight=1)
-        
-        # Main Content Area (Right panel)
-        # self.main_content_area = ctk.CTkFrame(self, fg_color="#F7F7F7", corner_radius=0)
-        # self.main_content_area.grid(row=0, column=1, sticky="nsew", padx=20, pady=20)
-        # self.main_content_area.grid_columnconfigure(0, weight=1) # Center content horizontally
-        # self.main_content_area.grid_rowconfigure(0, weight=1)
-        
-        # # Content Frames for different sections (Dashboard, Categories, etc.) 
-        self.dashboard_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.stock_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.finance_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.report_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.announcement_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.users_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        self.setting_content_frame = ctk.CTkFrame(self.main_frame, fg_color="transparent")
-        
+        self.grid_columnconfigure(0, weight=1)
+        self.grid_rowconfigure(2, weight=1)
                 
-        # stock_manage starts here
-         # content_frame
-        self.content_frame = ctk.CTkScrollableFrame(self.main_frame,fg_color="transparent",  
+        self.content_frame = ctk.CTkScrollableFrame(self, fg_color="transparent",  
         bg_color="transparent", corner_radius=10)
         self.content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        self.content_frame._parent_canvas.configure(width=1200)
+        self.content_frame._parent_canvas.configure(width=1200, height=850)
         self.content_frame.pack_propagate(False)
         
         #lbl
@@ -180,7 +51,7 @@ class Stock(ctk.CTk):
         self.back_lbl.grid(row=0,padx=(30,20),pady=(80,20),sticky="w",columnspan=4)
         
         #additem btn
-        self.add_item=ctk.CTkButton(self.content_frame,text="+    Add Item",fg_color="black",text_color="white",width=80,height=40,corner_radius=20,command=self.open_add_dialog)
+        self.add_item=ctk.CTkButton(self.content_frame,text="+    Add Item",fg_color="#A4A4EB",text_color="white",width=80,height=40,corner_radius=20,command=self.open_add_dialog)
         self.add_item.grid(row=0,sticky="e",padx=(20,20),pady=(20,20),columnspan=4)
         
         
@@ -220,8 +91,7 @@ class Stock(ctk.CTk):
                                      justify="center",text_color="#F5F5F5")
         self.search_bar.grid(padx=(20,20),pady=(20,20),column=0,row=3,sticky="w",columnspan=4)
         self.search_bar.bind("<KeyRelease>", lambda e: self.refresh_table())
-
-        
+   
         self.card_combo=ctk.CTkComboBox(self.content_frame,values=["Drinks","Vegetables","Bread","Cereals","Snacks","Fruits","All Categories"],fg_color="white",text_color="black", border_width=2,border_color="grey",width=200,height=40)
         self.card_combo.grid(row=3,column=2,sticky="e",padx=(10,20),pady=(20,10))
         self.card_combo.set("All Categories")
@@ -230,9 +100,7 @@ class Stock(ctk.CTk):
         self.header_table(start_row=4)
         self.update_summary_cards()
         self.load_stock_table()
-        self.show_dashboard_content()
-
-
+        #self.show_dashboard_content()
 
        # grid setup
         for i in range(4):
@@ -351,10 +219,6 @@ class Stock(ctk.CTk):
         
             row.grid_propagate(False)
  
-               
- 
-
-
             
             name_lbl=ctk.CTkLabel(row,text=name,font=("Arial",13))
             name_lbl.grid(row=0,column=0,sticky="w",padx=(17,15),pady=(10,10))
@@ -553,17 +417,17 @@ class Stock(ctk.CTk):
         ctk.CTkButton(
             button_frame, 
             text="Cancel", 
-            fg_color="transparent", 
-            text_color="#6B7280", 
+            fg_color="black", 
+            text_color="white", 
             command=dialog.destroy, 
-            hover_color="#F3F4F6"
+            hover_color="black"
         ).grid(row=0, column=1, padx=(10, 10), sticky="e") 
 
         
         ctk.CTkButton(
             button_frame, 
             text="Add Item", 
-            fg_color="#000000",
+            fg_color="#A4A4EB",
             text_color="white", 
             command=save_item
         ).grid(row=0, column=2, sticky="e")
@@ -797,120 +661,7 @@ class Stock(ctk.CTk):
         cursor.close()
         conn.close()
         return rows
-            
-        
-        
-    def load_icon(self, icon_name, size):
-        
-        try_paths = [
-            os.path.join(IMAGE_BASE_DIR, icon_name),
-            os.path.join(os.path.dirname(__file__), "icons", icon_name),
-            os.path.join(os.path.dirname(__file__), icon_name),
-        ]
-        for path in try_paths:
-            if os.path.exists(path):
-                try:
-                    img = Image.open(path).convert("RGBA").resize((size, size), Image.LANCZOS)
-                    return ImageTk.PhotoImage(img)
-                except Exception as e:
-                    print(f"Error loading icon {path}: {e}")
-        print(f"Icon {icon_name} not found. Returning default icon.")
-        return None
-        
-        
-    def hide_all_content_frames(self):
-        
-        for frame in [self.dashboard_content_frame, self.stock_content_frame,
-                     self.finance_content_frame, self.report_content_frame,
-                     self.announcement_content_frame, self.users_content_frame,
-                     self.setting_content_frame]:
-            frame.grid_forget()
-            
-    def set_sidebar_button_active(self, active_button):
-        
-        buttons = [self.dashboard_content_frame, self.stock_content_frame,
-                     self.finance_content_frame, self.report_content_frame,
-                     self.announcement_content_frame, self.users_content_frame,
-                     self.setting_content_frame]
-        for button in buttons:
-            if button == active_button:
-                button.configure(fg_color="#F7F7F9", text_color="black", font=("Arial", 16, "bold"))
-            else:
-                button.configure(fg_color="transparent", text_color="black", font=("Arial", 16))
-    
                 
-    
-    def show_dashboard_content(self):
-        self.hide_all_content_frames()
-      
-        self.dashboard_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        
-    def show_stock_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.stock_button) 
-        for w in self.stock_content_frame.winfo_children():
-            w.destroy()   
-        self.stock_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-       
-        
-    def show_finance_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.finance_button)
-        for w in self.finance_content_frame.winfo_children():
-            w.destroy()
-        self.finance_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        
-    def show_report_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.report_button)
-      
-        for w in self.report_content_frame.winfo_children():
-            w.destroy()
-            
-        self.report_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-           
-        
-    def show_announcement_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.announcement_button)
-       
-        for w in self.announcement_content_frame.winfo_children():
-            w.destroy()
-       
-        self.announcement_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        
-    def show_users_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.user_button)
-    
-        for w in self.users_content_frame.winfo_children():
-            w.destroy()   
-        
-        self.users_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-        
-        
-    def show_setting_content(self):
-        self.hide_all_content_frames()
-        self.set_sidebar_button_active(self.setting_button)
-        
-        for w in self.setting_content_frame.winfo_children():
-            w.destroy()
-   
-        self.setting_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-       
-    def logout(self):
-        
-        self.destroy()
-        import login
-        login_app = login.LoginPage()
-        login_app.mainloop()          
-    
-    
-    
    
 def get_category_id(category_name: str) -> int:
     
@@ -928,8 +679,6 @@ def get_category_id(category_name: str) -> int:
         raise ValueError(f"Category '{category_name}' not found in category table.")
     return row[0]
 
-
-
 def get_stock_management():
     try:
         conn=get_db_connection()
@@ -946,8 +695,3 @@ def get_stock_management():
     except Exception as e:
         print(f"DB  fetching stock error: {e}")
         return []
-            
-if __name__=="__main__":
-    app=Stock(customer_id=None, email=None)
-    app.mainloop()
-    

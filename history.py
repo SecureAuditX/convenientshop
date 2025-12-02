@@ -8,8 +8,6 @@ ctk.set_default_color_theme("blue")
 class App(ctk.CTkFrame):
   
     def __init__(self, parent_frame, customer_id, email):
-        # The main App frame will now have the light background and rounded corners
-        # that the old inner 'frame' had.
         super().__init__(parent_frame, fg_color="#f8f9ff", corner_radius=15)
         
         # Store customer_id for database queries
@@ -20,7 +18,6 @@ class App(ctk.CTkFrame):
         self.grid_rowconfigure(2, weight=1) # Row 2 (Orders Container) is configured to expand vertically
         self.grid_columnconfigure(0, weight=1)
 
-        # Note: All widgets are now children of 'self', not 'frame'
 
         # ----------------------------------------------------
         # 1. Search Bar (Row 0)

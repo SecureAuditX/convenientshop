@@ -3,8 +3,6 @@ import os
 from PIL import Image, ImageTk
 import mysql.connector
 import Payment
-from mysql.connector import Error
-import subprocess
 from Payment import Payment
 
 
@@ -114,10 +112,10 @@ class Checkout(ctk.CTkFrame):
         self.desc_lbl.grid(row=0, column=1, padx=(100, 0), sticky="w")
 
         self.price_lbl = ctk.CTkLabel(self.header_frame, text="Price", font=("Arial", 15, "italic", "bold"))
-        self.price_lbl.grid(row=0, column=2, padx=(100, 0), sticky="w")
+        self.price_lbl.grid(row=0, column=2, padx=(80, 0), sticky="w")
 
         self.qty_lbl = ctk.CTkLabel(self.header_frame, text="Quantity", font=("Arial", 15, "italic", "bold"))
-        self.qty_lbl.grid(row=0, column=3, padx=(0, 180), sticky="e")
+        self.qty_lbl.grid(row=0, column=3, padx=(0, 130), sticky="e")
 
         self.item_total_lbl = ctk.CTkLabel(self.header_frame, text="Item Total", font=("Arial", 15, "italic", "bold"))
         self.item_total_lbl.grid(row=0, column=4, padx=(0, 30), sticky="e")
