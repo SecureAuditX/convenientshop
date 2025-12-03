@@ -102,7 +102,7 @@ class NewAnnouncementPopup(ctk.CTkToplevel):
         discount_price_str = self.entries["discount_price_entry"].get()
         deadline_str = self.entries["discount_deadline_entry"].get()
         status = self.entries["status_entry"].get()
-        product_id = 1 # Placeholder
+        product_id = self.entries["product_dropdown"].get()
 
         # Basic Validation
         if not all([img_url, name, discount_price_str, deadline_str, status]):
