@@ -11,7 +11,7 @@ DB_HOST = "localhost"
 DB_PORT = 3306
 DB_NAME = "convenient_shop"
 DB_USER = "root"
-DB_PASS = "SECRET"
+DB_PASS = "zxcvbnm"
 
 def get_db_connection():
     # Use buffered=True to allow multiple queries on the same connection
