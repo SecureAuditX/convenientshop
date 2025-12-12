@@ -4,11 +4,11 @@ from mysql.connector import Error
 class Database:
     def __init__(self):
         """MySQL DB credentials"""
-        self.host = "localhost"
-        self.user = "root"
-        self.password = "zxcvbnm"
-        self.port = 3306
-        self.database = "convenient_shop"
+        self.host = "mysql-convenientshop-conveniencestore01.b.aivencloud.com"
+        self.user = "avnadmin"
+        self.password = "SECRET"
+        self.port = 24122
+        self.database = "conv_shop_db"
         self.connection = None
         self.cursor = None
         

@@ -1,9 +1,8 @@
-from db_file import Database
+from db_file import db
 import customtkinter as ctk
 import os
 from PIL import Image, ImageTk
 import mysql.connector
-from mysql.connector import Error
 
 # --- Configuration ---
 IMAGE_ROOT_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop" 
@@ -22,12 +21,90 @@ CARD_COLORS = [
 def get_db_connection():
     # Establishes connection to the MySQL database
     return mysql.connector.connect(
-        host="localhost",
-        user="root",  
-        password="zxcvbnm",  
-        port=3306,
-        database="convenient_shop" 
+        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
+        user="avnadmin",  
+        password="SECRET",  
+        port=24122,
+        database="conv_shop_db" 
     )
+    
+
+def get_cart_quantities_by_category(customer_id):
+    """Returns total quantity in cart grouped by category."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        q = """
+            SELECT 
+                p.category_id,
+                SUM(co.quantity) AS total_category_cart_qty
+            FROM 
+                check_out co
+            JOIN 
+                product p ON co.product_id = p.product_id
+            WHERE 
+                co.customer_id = %s 
+                AND co.total IS NULL
+            GROUP BY 
+                p.category_id
+        """
+
+        cursor.execute(q, (customer_id,))
+        results = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return {
+            row["category_id"]: row["total_category_cart_qty"]
+            for row in results
+        }
+
+    except Exception as e:
+        print(f"DB fetching error (categories cart): {e}")
+        return {}
+
+
+
+
+
+def get_cart_quantities_by_product(customer_id):
+    """Returns how many of each product ID is currently in the cart."""
+    try:
+        conn = get_db_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        q = """
+            SELECT 
+                product_id,
+                SUM(quantity) AS total_product_cart_qty
+            FROM 
+                check_out
+            WHERE 
+                customer_id = %s 
+                AND total IS NULL
+            GROUP BY 
+                product_id
+        """
+
+        cursor.execute(q, (customer_id,))
+        results = cursor.fetchall()
+
+        cursor.close()
+        conn.close()
+
+        return {
+            row["product_id"]: row["total_product_cart_qty"]
+            for row in results
+        }
+
+    except Exception as e:
+        print(f"DB fetching error (products cart): {e}")
+        return {}
+
+
+    
     
 def get_all_categories():
     # Fetches all categories and their aggregated quantity
@@ -62,33 +139,77 @@ def Get_products_by_category(category_id):
 # --- Image Loaders ---
 
 def category_load_image(path, size=(80, 80)):
-    # Loads and resizes category icon image
-    full_path = os.path.join(IMAGE_ROOT_DIR, path.replace('/', os.sep)) 
-    try:
-        img = Image.open(full_path).resize(size, Image.LANCZOS)
-        return ImageTk.PhotoImage(img)
-    except Exception:
+    if not path:
         return None
 
-def product_load_image(path, size=(60, 60)):
-    # Loads and resizes product image
+    # If database stores URL
+    if path.startswith("http://") or path.startswith("https://"):
+        try:
+            import requests
+            from io import BytesIO
+            response = requests.get(path, timeout=5)
+            img = Image.open(BytesIO(response.content)).resize(size, Image.LANCZOS)
+            return ImageTk.PhotoImage(img)
+        except Exception as e:
+            print("Category image load error:", e)
+            return None
+
+    # Otherwise treat as local path
     full_path = os.path.join(IMAGE_ROOT_DIR, path.replace('/', os.sep))
+
     try:
         img = Image.open(full_path).resize(size, Image.LANCZOS)
         return ImageTk.PhotoImage(img)
     except Exception as e:
+        print("Category image load error:", e)
         return None
 
 
-# --- Category Class ---
+def product_load_image(path, size=(60, 60)):
+    if not path:
+        return None
+
+    # URL image: download it
+    if path.startswith("http://") or path.startswith("https://"):
+        try:
+            import requests
+            from io import BytesIO
+            response = requests.get(path, timeout=5)
+            img = Image.open(BytesIO(response.content)).resize(size, Image.LANCZOS)
+            return ImageTk.PhotoImage(img)
+        except Exception as e:
+            print("Product image load error:", e)
+            return None
+
+    # Local file
+    full_path = os.path.join(IMAGE_ROOT_DIR, path.replace('/', os.sep))
+
+    try:
+        img = Image.open(full_path).resize(size, Image.LANCZOS)
+        return ImageTk.PhotoImage(img)
+    except Exception as e:
+        print("Product image load error:", e)
+        return None
+
+
+
 
 class Category(ctk.CTkScrollableFrame): 
-    def __init__(self, parent_frame, card_colors, get_all_categories_func, category_load_image_func, get_products_by_category_func, customer_id, email, cart_update_callback):
-        # Category is now a single CTkScrollableFrame
+    def __init__(self, parent_frame, card_colors, get_all_categories_func, category_load_image_func, 
+                 get_products_by_category_func, customer_id, email, cart_update_callback, 
+                 get_cart_quantities_by_category_func, 
+                 get_cart_quantities_by_product_func,  
+                 dashboard_badge_update_callback):
         super().__init__(parent_frame, fg_color="#f8f9ff")
         self.customer_id = customer_id
         self.email = email
         self.cart_update_callback = cart_update_callback
+        self.dashboard_badge_update_callback = dashboard_badge_update_callback
+        self.get_cart_quantities_by_product = get_cart_quantities_by_product_func
+        self.get_category_quantities_func = get_cart_quantities_by_category_func 
+        self.initial_category_quantities = self.get_category_quantities_func(self.customer_id)
+        
+        self.category_cart_qty_labels = {} 
         
         # Configure main grid: 1 column for content alignment
         self.grid_columnconfigure(0, weight=1)
@@ -128,15 +249,22 @@ class Category(ctk.CTkScrollableFrame):
         self.layout_mode = "overview" 
         self.category_cards = {} 
         self.horizontal_cards = {} 
+        self.category_overview_badges = {}
+        self.category_horizontal_badges = {}
+        
+        self.get_cart_quantities_by_category_func = get_cart_quantities_by_category_func
+
 
         # Configure 4 equal columns for the overview cards frame
         for col in range(4):
             self.overview_cards_frame.grid_columnconfigure(col, weight=1)
-        
+            
+        initial_cart_quantities = self.get_cart_quantities_by_category(self.customer_id)        
         # Load and render initial large category cards
-        categories = get_all_categories_func()
+        categories = self.get_all_categories()
         for row_idx, (category_id, name, quantity, image_url) in enumerate(categories):
-            card_color = CARD_COLORS[row_idx % len(CARD_COLORS)]
+            cart_qty = initial_cart_quantities.get(category_id, 0) # Get current cart quantity
+            card_color = self.CARD_COLORS[row_idx % len(self.CARD_COLORS)]
             self.make_category_card(
                 parent=self.overview_cards_frame, 
                 row=row_idx // 4, col=row_idx % 4,
@@ -144,11 +272,12 @@ class Category(ctk.CTkScrollableFrame):
                 category_id=category_id,
                 qty_text="Quantity ",
                 qty_amount=str(quantity),
+                cart_qty=cart_qty, # PASS CART QUANTITY
                 icon_path=image_url if image_url else os.path.join("images", "default.png"), 
                 bg=card_color
-            ) 
+            )
         
-    def make_category_card(self, parent, row, col, name, qty_text, qty_amount, icon_path, category_id, bg="#E8EEF9"):
+    def make_category_card(self, parent, row, col, name, qty_text, qty_amount, icon_path, cart_qty, category_id, bg="#E8EEF9"):
         # Creates the large card used in the overview mode
         card = ctk.CTkFrame(parent, fg_color=bg, corner_radius=30, width=190, height=200)
         card.grid(row=row, column=col, padx=20, pady=12, sticky="nw")
@@ -156,6 +285,11 @@ class Category(ctk.CTkScrollableFrame):
         
         for r in range(3): card.grid_rowconfigure(r, weight=1)
         card.grid_columnconfigure(0, weight=1)
+        
+       
+
+        img = self.category_load_image(icon_path, size=(80, 80)) 
+        img_lbl = ctk.CTkLabel(card, text="", image=img, fg_color=bg)
         
         img = self.category_load_image(icon_path, size=(80, 80)) 
         img_lbl = ctk.CTkLabel(card, text="", image=img, fg_color=bg)
@@ -197,11 +331,34 @@ class Category(ctk.CTkScrollableFrame):
 
         return card
     
-    def make_horizontal_category_card(self,parent,row,col,name,qty_text,qty_amount,icon_path,category_id,bg="#E8EEF9"):
+    def make_horizontal_category_card(self,parent,row,col,name,qty_text,qty_amount, cart_qty,icon_path,category_id,bg="#E8EEF9"):
         # Creates the smaller card used in the detail mode's horizontal scrollbar
         card=ctk.CTkFrame(parent,fg_color=bg,corner_radius=30,width=130,height=170)
         card.grid(row=row,column=col,padx=20,pady=12,sticky="nw")
         card.grid_propagate(False)
+        
+        # --- NEW: Cart Badge Implementation ---
+        qty_badge = ctk.CTkLabel(
+            card, 
+            text=str(cart_qty),
+            width=24, height=24,
+            fg_color="red",
+            text_color="white",
+            font=("Arial", 12, "bold"),
+            corner_radius=12 # Makes it a circle
+        )
+        qty_badge.place(relx=0.9, rely=0.1, anchor="center") 
+        
+        if cart_qty == 0:
+            qty_badge.place_forget() 
+        
+        # Store the reference
+        if category_id not in self.category_horizontal_badges:
+            self.category_horizontal_badges[category_id] = []
+        self.category_horizontal_badges[category_id].append(qty_badge)
+        # --- END NEW: Cart Badge Implementation ---
+        
+        img=category_load_image(icon_path,size=(80,80))
         
         for r in range(3): card.grid_rowconfigure(r,weight=1)
         card.grid_columnconfigure(0,weight=1)
@@ -243,116 +400,185 @@ class Category(ctk.CTkScrollableFrame):
     
     def on_category_click(self, category_id):
         # Handles mode switch from overview to detail view
-        if self.layout_mode=="overview":
-            self.layout_mode="detail"
+        if self.layout_mode == "overview":
+            self.layout_mode = "detail"
+
             # Hide large cards container (Row 2)
             self.overview_cards_frame.grid_remove()
-            # Show horizontal scroll frame in place of the large cards container (Row 2)
-            self.horizontal_cards_container.grid(row=2,column=0,sticky="ew",padx=20,pady=(10,0))
-            
+
+            # Show horizontal scroll frame (Row 2)
+            self.horizontal_cards_container.grid(
+                row=2, column=0, sticky="ew", padx=20, pady=(10, 0)
+            )
+
             # Populate horizontal cards if empty
             if not self.horizontal_cards:
-                categories=self.get_all_categories()
-                for idx,(cid,name,quantity,image_url) in enumerate(categories):
+                categories = self.get_all_categories()
+
+                #  Correct way to fetch cart quantities
+                cart_quantities = self.get_cart_quantities_by_category_func(self.customer_id)
+
+                for idx, (cid, name, quantity, image_url) in enumerate(categories):
+
+                    #  Get quantity for that category
+                    cart_qty = cart_quantities.get(cid, 0)
+
                     card_color = CARD_COLORS[idx % len(CARD_COLORS)]
+
                     self.make_horizontal_category_card(
-                    parent=self.horizontal_cards_container,
-                    row=0, col=idx,
-                    name=name,
-                    category_id=cid,
-                    qty_text="Quantity ",
-                    qty_amount=str(quantity),
-                    icon_path=image_url if image_url else os.path.join("images", "default.png"), 
-                    bg=card_color
-                )
-        
+                        parent=self.horizontal_cards_container,
+                        row=0,
+                        col=idx,
+                        name=name,
+                        qty_text="Quantity ",
+                        qty_amount=str(quantity),
+                        cart_qty=cart_qty,  # <--- REQUIRED
+                        icon_path=image_url if image_url else os.path.join("images", "default.png"),
+                        category_id=cid,  # <--- REQUIRED
+                        bg=card_color
+                    )
+
         # Update styling for selected horizontal card
-        self.active_category_id=category_id
-        
-        for cid,info in self.horizontal_cards.items():
-            card=info["frame"]
-            if cid==category_id:
+        self.active_category_id = category_id
+
+        for cid, info in self.horizontal_cards.items():
+            card = info["frame"]
+            if cid == category_id:
                 card.configure(fg_color=info["selected_bg"])
-                card.grid_configure(pady=(18,6)) # Raise slightly
+                card.grid_configure(pady=(18, 6))
             else:
                 card.configure(fg_color=info["normal_bg"])
-                card.grid_configure(pady=(12,12)) # Reset position
+                card.grid_configure(pady=(12, 12))
 
         # Render products in the product container (Row 3)
         self.render_products_for_category(category_id)
+
         
     
     def render_products_for_category(self, category_id):
-        # Clears and displays new product cards based on category_id
+        """Display all products under a category with product-level cart badges."""
+        
+        self.category_cart_qty_labels.clear()
+        
+        # 1. Clear previous product cards
         for child in self.products_container.winfo_children():
             child.destroy()
 
+        # 2. Fetch product list
         products = self.Get_products_by_category(category_id)
         if not products:
-            msg = ctk.CTkLabel(self.products_container, text="No product found for this category", font=("Arial", 16))
-            msg.grid(row=0, column=0, padx=10, pady=10, sticky='w')
+            msg = ctk.CTkLabel(
+                self.products_container,
+                text="No product found for this category",
+                font=("Arial", 16)
+            )
+            msg.grid(row=0, column=0, padx=10, pady=10, sticky="w")
             return
 
+        # 3. Fetch per-product active cart quantities
+        product_cart_quantities = get_cart_quantities_by_product(self.customer_id)
+
+        # 4. Configure responsive 5-column grid
         columns = 5
         for col in range(columns):
             self.products_container.grid_columnconfigure(col, weight=1)
 
+        # 5. Build product cards
         for index, (prod_id, name, price, stock_quantity, image_url) in enumerate(products):
             row = index // columns
             col = index % columns
 
-            # Product card setup
-            card = ctk.CTkFrame(self.products_container, fg_color="#F7F7F7", corner_radius=20, width=170, height=190)
-            card.grid(row=row, column=col, padx=10, pady=10, sticky='n')
+            # Product Card
+            card = ctk.CTkFrame(
+                self.products_container,
+                fg_color="#F7F7F7",
+                corner_radius=20,
+                width=170,
+                height=210
+            )
+            card.grid(row=row, column=col, padx=12, pady=12, sticky="n")
             card.grid_propagate(False)
 
-            # Image
+            # ----------- PRODUCT BADGE (RED CIRCLE) -----------
+            current_qty = product_cart_quantities.get(prod_id, 0)
+
+            qty_badge = ctk.CTkLabel(
+                card,
+                text=str(current_qty),
+                width=24, height=24,
+                fg_color="red",
+                text_color="white",
+                font=("Arial", 12, "bold"),
+                corner_radius=12
+            )
+            qty_badge.place(relx=0.88, rely=0.08, anchor="center")
+
+            if current_qty == 0:
+                qty_badge.place_forget()
+
+            # Store badge reference for updates
+            if prod_id not in self.category_cart_qty_labels:
+                self.category_cart_qty_labels[prod_id] = []
+            self.category_cart_qty_labels[prod_id].append(qty_badge)
+            # ---------------------------------------------------
+
+            # 7. Product Image
             img = product_load_image(image_url, size=(60, 60)) if image_url else None
             if img:
-                ctk.CTkLabel(card, image=img, text="").pack(pady=(8, 2))
+                image_label = ctk.CTkLabel(card, image=img, text="")
+                image_label.image = img
+                image_label.pack(pady=(10, 4))
             else:
-                ctk.CTkLabel(card, text="🛒", font=("Arial", 20)).pack(pady=(8, 2))
+                ctk.CTkLabel(card, text="🛒", font=("Arial", 22)).pack(pady=(10, 4))
 
-            ctk.CTkLabel(card, text=name, font=("Arial", 12, "bold")).pack(pady=(2, 0))
-            ctk.CTkLabel(card, text=f"${price}", font=("Arial", 14, "bold")).pack(pady=(0, 6))
+            # 8. Product Name & Price
+            ctk.CTkLabel(card, text=name, font=("Arial", 13, "bold")).pack(pady=(0, 0))
+            ctk.CTkLabel(card, text=f"${price:.2f}", font=("Arial", 14, "bold")).pack(pady=(0, 6))
 
-            # Quantity control setup
+            # 9. Quantity Selector
             qty_frame = ctk.CTkFrame(card, fg_color="#DCE2FF", corner_radius=10)
             qty_frame.pack(pady=4)
 
-            qty = 0 if stock_quantity == 0 else 1
-            qty_var = ctk.IntVar(value=qty)
+            qty_var = ctk.IntVar(value=1 if stock_quantity > 0 else 0)
 
-            minus_btn = ctk.CTkButton(qty_frame, text="-", width=24, height=24,
-                                      fg_color="white", text_color="black", corner_radius=12,
-                                      command=lambda qv=qty_var: self.decrease(qv))
+            minus_btn = ctk.CTkButton(
+                qty_frame, text="-", width=24, height=24,
+                fg_color="white", text_color="black",
+                corner_radius=12,
+                command=lambda qv=qty_var: self.decrease(qv)
+            )
             minus_btn.pack(side="left", padx=(4, 2))
 
             qty_lbl = ctk.CTkLabel(qty_frame, textvariable=qty_var, width=30)
             qty_lbl.pack(side="left")
 
-            plus_btn = ctk.CTkButton(qty_frame, text="+", width=24, height=24,
-                                      fg_color="white", text_color="black", corner_radius=12,
-                                      command=lambda qv=qty_var, stock=stock_quantity: self.increase(qv, stock))
+            plus_btn = ctk.CTkButton(
+                qty_frame, text="+", width=24, height=24,
+                fg_color="white", text_color="black",
+                corner_radius=12,
+                command=lambda qv=qty_var, stock=stock_quantity: self.increase(qv, stock)
+            )
             plus_btn.pack(side="left", padx=(2, 4))
 
             if stock_quantity == 0:
-                plus_btn.configure(state="disabled")
                 minus_btn.configure(state="disabled")
+                plus_btn.configure(state="disabled")
 
-            # Add to cart button
+            # 10. Add to Cart Button
             add_btn = ctk.CTkButton(
                 card,
                 text="Add to Cart 🛒",
-                width=80,
+                width=130,
                 height=40,
                 fg_color="#A4A4EB",
                 text_color="white",
                 corner_radius=12,
                 command=lambda pid=prod_id, n=name, p=price, qv=qty_var, s=stock_quantity, cat_id=category_id:
-                self.add_to_cart(pid, n, p, qv, s, cat_id)
+                    self.add_to_cart(pid, n, p, qv, s, cat_id)
             )
-            add_btn.pack(pady=(2, 4),padx=(2,4))
+            add_btn.pack(pady=(6, 10))
+
+
             
     def increase(self,qv, stock):
         # Increases product quantity, respecting stock limit
@@ -379,12 +605,12 @@ class Category(ctk.CTkScrollableFrame):
         if qty <= 0 or qty > stock_quantity:
             self.show_message("Stock error or quantity is zero!", "red")
             return
-        
+
         try:
             conn = get_db_connection()
             cursor = conn.cursor()
-            
-            # Use the dynamically passed customer_id
+
+            # Check if already in cart
             cursor.execute("""
                 SELECT cart_id, quantity
                 FROM check_out
@@ -392,18 +618,19 @@ class Category(ctk.CTkScrollableFrame):
             """, (product_id, self.customer_id))
 
             row = cursor.fetchone()
+
             if row is None:
-                # Insert new item
+                # Insert new row
                 cursor.execute("""
                     INSERT INTO check_out (product_id, customer_id, items, price, quantity, item_total) 
                     VALUES (%s, %s, %s, %s, %s, %s)
-                """, (product_id, self.customer_id, name, price, qty, float(price) * qty))  
-
+                """, (product_id, self.customer_id, name, price, qty, float(price) * qty))
             else:
-                # Update existing item quantity
+                # Update existing
                 cart_id, current_qty = row
                 new_qty = current_qty + qty
                 new_total = new_qty * float(price)
+
                 cursor.execute("""
                     UPDATE check_out
                     SET quantity = %s, item_total = %s
@@ -412,19 +639,117 @@ class Category(ctk.CTkScrollableFrame):
 
             conn.commit()
             self.show_message(f"Added {qty} x {name} to cart!", "green")
-            
-            # After modifying the cart, update the cart item count
+
+            #  UPDATE CATEGORY BADGES HERE (no badge creation)
+            self.update_category_badges()
+
+            # Update top cart count
             if self.cart_update_callback:
-                self.cart_update_callback()  # Call the callback to update the cart count
-        
+                self.cart_update_callback()
+
+            # Update dashboard badges
+            if self.dashboard_badge_update_callback:
+                self.dashboard_badge_update_callback()
+
         except Exception as e:
             print(f"Cart Update error: {e}")
+
         finally:
             try:
                 cursor.close()
                 conn.close()
             except:
                 pass
+
+            
+    
+    def get_cart_quantity_for_product(self, product_id):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute("""
+                SELECT SUM(quantity) AS total_qty
+                FROM check_out
+                WHERE customer_id = %s AND product_id = %s AND total IS NULL
+            """, (self.customer_id, product_id))
+
+            row = cursor.fetchone()
+            return row["total_qty"] if row["total_qty"] else 0
+
+        except Exception as e:
+            print("Cart qty fetch error:", e)
+            return 0
+
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+            
+    def update_category_badges(self):
+        try:
+            conn = get_db_connection()
+            cursor = conn.cursor(dictionary=True)
+
+            cursor.execute("""
+                SELECT product_id, SUM(quantity) AS total_qty
+                FROM check_out
+                WHERE customer_id = %s AND total IS NULL
+                GROUP BY product_id
+            """, (self.customer_id,))
+
+            rows = cursor.fetchall()
+            qty_map = {r["product_id"]: r["total_qty"] for r in rows}
+
+            # Update all labels
+            for product_id, labels in self.category_cart_qty_labels.items():
+                qty = qty_map.get(product_id, 0)
+
+                for lbl in labels:
+                    if qty > 0:
+                        lbl.configure(text=str(qty))
+                        lbl.place(relx=0.85, rely=0.08, anchor="center")
+                    else:
+                        lbl.place_forget()
+
+        except Exception as e:
+            print("Badge update error:", e)
+
+        finally:
+            try:
+                cursor.close()
+                conn.close()
+            except:
+                pass
+
+
+            
+    def get_cart_quantities_by_category(self, customer_id):
+        try:
+            q = """
+                SELECT 
+                    p.category_id, 
+                    SUM(co.quantity) AS total_category_cart_qty
+                FROM 
+                    check_out co
+                JOIN 
+                    product p ON co.product_id = p.product_id
+                WHERE 
+                    co.customer_id = %s AND co.total IS NULL
+                GROUP BY 
+                    p.category_id
+            """
+            rows = db.fetchall(q, (customer_id,))
+            
+            # Convert list of dicts to a single dict {category_id: total_quantity}
+            category_quantities = {r['category_id']: r['total_category_cart_qty'] for r in rows}
+            return category_quantities
+
+        except Exception as e:
+            print(f"Error fetching active cart quantities by category: {e}")
+            return {}
 
     
     def update_cart_item_count(self):

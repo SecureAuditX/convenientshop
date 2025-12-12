@@ -8,15 +8,14 @@ from Payment import Payment
 
 IMAGE_ROOT_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop" 
 
-# --- Database Functions ---
-
 def get_db_connection():
+    # Establishes connection to the MySQL database
     return mysql.connector.connect(
-        host="localhost",
-        user="root",  
-        password="zxcvbnm",  
-        port=3306,
-        database="convenient_shop" 
+        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
+        user="avnadmin",  
+        password="SECRET",  
+        port=24122,
+        database="conv_shop_db" 
     )
 
 def get_cart_items(customer_id):
@@ -104,22 +103,20 @@ class Checkout(ctk.CTkFrame):
         self.header_frame = ctk.CTkFrame(self.check_out_container, fg_color="transparent")
         self.header_frame.grid(row=0, column=0, sticky="ew", padx=15, pady=(10, 5))
         
-        # Header Labels (using grid for placement within header_frame)
         self.item_lbl = ctk.CTkLabel(self.header_frame, text="Items", font=("Arial", 15, "italic", "bold"))
-        self.item_lbl.grid(row=0, column=0, padx=(30, 0), sticky="w")
+        self.item_lbl.grid(row=0, column=0, padx=(25, 0), pady=(10, 0), sticky='w')
 
         self.desc_lbl = ctk.CTkLabel(self.header_frame, text="Description", font=("Arial", 15, "bold", "italic"))
-        self.desc_lbl.grid(row=0, column=1, padx=(100, 0), sticky="w")
+        self.desc_lbl.grid(row=0, column=1, padx=(50, 0), pady=(10, 0), sticky="w")
 
         self.price_lbl = ctk.CTkLabel(self.header_frame, text="Price", font=("Arial", 15, "italic", "bold"))
-        self.price_lbl.grid(row=0, column=2, padx=(80, 0), sticky="w")
+        self.price_lbl.grid(row=0, column=2, padx=(20, 150), pady=(10, 0), sticky="e")
 
         self.qty_lbl = ctk.CTkLabel(self.header_frame, text="Quantity", font=("Arial", 15, "italic", "bold"))
-        self.qty_lbl.grid(row=0, column=3, padx=(0, 130), sticky="e")
+        self.qty_lbl.grid(row=0, column=3, padx=(0, 60), pady=(10, 0), sticky="e")
 
         self.item_total_lbl = ctk.CTkLabel(self.header_frame, text="Item Total", font=("Arial", 15, "italic", "bold"))
-        self.item_total_lbl.grid(row=0, column=4, padx=(0, 30), sticky="e")
- 
+        self.item_total_lbl.grid(row=0, column=4, padx=(0, 40), pady=(10, 0), sticky="e")
         
         # Scrollable Frame for Products (Inside check_out_container - Row 1)
         self.checkout_product_container = ctk.CTkScrollableFrame(self.check_out_container, fg_color="#ECEFFA")
@@ -184,18 +181,17 @@ class Checkout(ctk.CTkFrame):
         print("Button clicked, proceeding to Payment...")
 
         # Assuming after payment you want to reset the cart count
-        self.reset_cart_after_checkout()
+        # self.reset_cart_after_checkout()
 
         # Check if the Payment frame already exists, if not, create it
         if not hasattr(self, 'payment_page'):  # Check if the Payment page already exists
             self.payment_page = Payment(self.master, customer_id=self.customer_id, email=self.email, cart_update_callback=self.cart_update_callback)
 
         # Hide the Checkout frame and show the Payment frame
-        self.grid_forget()  # Hide the current Checkout frame
-        self.payment_page.grid(row=0, column=0, sticky="nsew")  # Show the Payment frame
+        self.pack_forget()  # parent frame in payment is pack so use packk
+        self.payment_page.pack(fill="both", expand=True)# Show the Payment frame
 
         print("Payment frame is now visible.")
-
 
 
     
@@ -242,15 +238,15 @@ class Checkout(ctk.CTkFrame):
             # Product name/description
             name_lbl = ctk.CTkLabel(row, text=name, font=("Arial", 13))
             # Positioned relative to image and before price/qty controls
-            name_lbl.grid(row=0, column=1, sticky="w", padx=(50, 0), pady=(10, 0)) 
+            name_lbl.grid(row=0, column=1, sticky="w", padx=(60, 0), pady=(10, 0)) 
             
             # Price
             price_lbl = ctk.CTkLabel(row, text=f"{price:.2f}", font=("Arial", 13))
-            price_lbl.grid(row=0, column=2, padx=(20, 0)) # Fixed position
+            price_lbl.grid(row=0, column=2, padx=(20, 150), pady=(10, 0), sticky="e") # Fixed position
             
             # Quantity controls
             qty_frame = ctk.CTkFrame(row, fg_color="#DCE2FF", corner_radius=16)
-            qty_frame.grid(row=0, column=3, padx=(0, 50)) # Fixed position
+            qty_frame.grid(row=0, column=3, padx=(0, 70), sticky="e") # Fixed position
             
             minus_btn = ctk.CTkButton(qty_frame, text="-", width=18, height=24,
                                        fg_color="transparent", text_color="black", hover_color="#C0C8F5",
@@ -405,9 +401,6 @@ class Checkout(ctk.CTkFrame):
         
         # Reload the cart to reflect the changes (it should now show an empty cart)
         self.load_cart()
-
-    
-# --- Application Execution ---
 
 if __name__ == "__main__":
     #app = ctk.CTk()

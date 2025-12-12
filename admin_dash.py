@@ -10,11 +10,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="localhost",
-        user="root",
-        password="zxcvbnm",
-        port=3306,
-        database="convenient_shop"
+        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
+        user="avnadmin",
+        password="SECRET",
+        port=24122,
+        database="conv_shop_db"
     )
 
 def image_path_join(*parts):

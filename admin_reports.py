@@ -7,11 +7,11 @@ import certifi
 import csv
 
 # ---------- DB CONFIG ----------
-DB_HOST = "localhost"
-DB_PORT = 3306
-DB_NAME = "convenient_shop"
-DB_USER = "root"
-DB_PASS = "zxcvbnm"
+DB_HOST = "mysql-convenientshop-conveniencestore01.b.aivencloud.com"
+DB_PORT = 24122
+DB_NAME = "conv_shop_db"
+DB_USER = "avnadmin"
+DB_PASS = "SECRET"
 
 def get_db_connection():
     # Use buffered=True to allow multiple queries on the same connection

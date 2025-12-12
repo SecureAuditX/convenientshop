@@ -1,6 +1,7 @@
 import customtkinter as ctk
 import os
 import re
+import datetime
 from PIL import Image, ImageTk
 import mysql.connector
 
@@ -9,7 +10,7 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",  
-        password="zxcvbnm",  
+        password="SECRET",  
         port = 3306,
         database="convenient_shop" 
     )
@@ -583,10 +584,13 @@ class Stock(ctk.CTkFrame):
         
         for field in required:
             if not vals[field]:
-                return False,"Put something bro"
+                return False,"cannot be empty"
         
         if not re.match(r"^[A-Za-z].*$", vals["name"]):
             return False, "Please enter a valid product name "
+        
+        if  len(vals['name']) > 50:
+            return False, "Product name cannot be more then 50 characters "
         
         
         if not re.match(r"^[A-Z0-9]{3,8}-[0-9]{3,5}$", vals["sku"]):
@@ -594,23 +598,45 @@ class Stock(ctk.CTkFrame):
         
         if not vals["name"].strip():
             return False, "Product name cannot be blank."
+        
         if vals["qty"] and not vals["qty"].isdigit():
             return False,"Quantity should be digit."
+        
+        if not vals["qty"].isdigit():
+            return False, "Quantity should be a whole number."
+        
+
+        if int(vals['qty']) >= 1000:
+            return False,"Quantity should be less then 1000"
         
         try:
             float(vals["price"])
         except:
             return False,"price must be in float"
         
+        if float(vals['price'])<=0.0:
+            return False,"Price cannot be zero."
+        
         try:
+            
             float(vals["cost"])
         except:
             return False,"cost must be in float"
         
+        if float(vals['cost']) <= 0.0:
+            return False,"cost cannot be zero."
+        
         if vals["min_qty"] and not vals["min_qty"].isdigit():
             return False,"Minimun quantity must be a whole number."
         
-        import datetime
+        if int(vals["min_qty"])<=0 or int(vals['qty'])<=0:
+            return False,"Quantity cannot be zero"
+        
+        if vals["min_qty"] > vals['qty']:
+            return False,"Minimun quantity cannot be greater then current quantity"
+        
+        
+        
         try:
             datetime.datetime.strptime(vals["restock"], "%Y-%m-%d %H:%M:%S")
         except:

@@ -123,10 +123,10 @@ class App(ctk.CTkFrame, HashingMixin):
 
         try:
             conn = mysql.connector.connect(
-                host="localhost",
-                user="root",
-                password="zxcvbnm",
-                database="convenient_shop"
+                host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
+                user="avnadmin",
+                password="SECRET",
+                database="conv_sshop_db"
             )
             cursor = conn.cursor(dictionary=True)
 

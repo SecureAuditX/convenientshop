@@ -13,7 +13,9 @@ from category import (
     Category, 
     get_all_categories, 
     category_load_image, 
-    Get_products_by_category 
+    Get_products_by_category,
+    get_cart_quantities_by_product,
+    get_cart_quantities_by_category
 )
 
 # Images path
@@ -61,6 +63,9 @@ class UserDashboard(ctk.CTk):
         
         # Product_id -> quantity
         self.cart_cache = {}
+        self.cart_qty_labels = {}
+        self.category_qty_labels = {}
+        self.category_ui = None
  
         #sidebar frame (left panel)
         self.sidebar_frame = ctk.CTkFrame(self, fg_color="#E0DDF0", corner_radius=10) #D8DBF7
@@ -323,7 +328,6 @@ class UserDashboard(ctk.CTk):
   
     def show_categories_content(self):
         self.hide_all_content_frames()
-        # Assuming your Categories sidebar button is named self.categories_button
         self.set_sidebar_button_active(self.categories_button) 
 
         for w in self.category_content_frame.winfo_children():
@@ -331,18 +335,28 @@ class UserDashboard(ctk.CTk):
             
         # 2. Make the category content frame visible
         self.category_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
-
-        category_ui = Category(
-            parent_frame=self.category_content_frame,
-            card_colors=CARD_COLORS, # CARD_COLORS is already defined in user_dashboard.py
-            get_all_categories_func=get_all_categories, 
-            category_load_image_func=category_load_image, 
+        
+        # Change parent_frame to the correctly defined container
+        self.category_ui = Category(
+            parent_frame=self.category_content_frame, 
+            card_colors=CARD_COLORS,
+            get_all_categories_func=get_all_categories,
+            category_load_image_func=category_load_image,
             get_products_by_category_func=Get_products_by_category,
             customer_id=self.customer_id,
             email=self.logged_in_email,
-            cart_update_callback=self.update_cart_item_count
+            cart_update_callback=self.update_cart_item_count,
+            get_cart_quantities_by_category_func=get_cart_quantities_by_category,
+            get_cart_quantities_by_product_func=get_cart_quantities_by_product,
+            dashboard_badge_update_callback=self.update_all_dashboard_badges
         )
-        category_ui.pack(expand=True, fill="both", padx=0, pady=0)
+    
+       
+        self.category_ui.grid(row=0, column=0, sticky="nsew")
+        self.category_ui.grid(row=0, column=0, sticky="nsew")
+        self.category_content_frame.grid_rowconfigure(0, weight=1)
+        self.category_content_frame.grid_columnconfigure(0, weight=1)
+
         
     def show_checkout_content(self):
         """Shows the Checkout UI in the main frame."""
@@ -379,8 +393,14 @@ class UserDashboard(ctk.CTk):
             
         self.payment_content_frame.grid(row=0, column=0, sticky="nsew", padx=20, pady=20)
         
-        # Instantiate and place the Payment UI
-        payment_ui = Payment(self.payment_content_frame, customer_id=self.customer_id, email=self.logged_in_email, cart_update_callback=self.update_cart_item_count)
+        payment_ui = Payment(
+            self.payment_content_frame, 
+            customer_id=self.customer_id, 
+            email=self.logged_in_email, 
+            cart_update_callback=self.update_cart_item_count,
+            # NEW: Pass the badge reset function to Payment
+            dashboard_badge_reset_callback=self.clear_dashboard_cart_badges 
+        )
         payment_ui.pack(expand=True, fill="both", padx=0, pady=0)
 
     def show_history_content(self):
@@ -423,6 +443,8 @@ class UserDashboard(ctk.CTk):
         
     # Start of dashboard content implementationn
     def render_dashboard_ui(self, parent_frame):
+        
+        self.cart_qty_labels.clear()
 
         for widget in parent_frame.winfo_children():
             widget.destroy()
@@ -519,6 +541,7 @@ class UserDashboard(ctk.CTk):
         self.popular_items_scroll_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
         
         popular_items = self.fetch_products_by_flag(flag_column="is_popular", limit=12)
+        active_quantities = self.fetch_active_cart_quantities()
 
         if not popular_items:
             popular_items = [
@@ -549,6 +572,30 @@ class UserDashboard(ctk.CTk):
             )
             card.grid(row=0, column=i, padx=10, pady=(0, 40))
             card.pack_propagate(False)
+            current_qty = active_quantities.get(prod_id, 0)
+            
+            # The red circle/badge
+            qty_badge = ctk.CTkLabel(
+                card, 
+                text=str(current_qty),
+                width=24, height=24,
+                fg_color="red",
+                text_color="white",
+                font=("Arial", 12, "bold"),
+                corner_radius=12 # Makes it a circle
+            )
+            # Position it at the top right of the card (e.g., 85% across, 8% down)
+            qty_badge.place(relx=0.85, rely=0.08, anchor="center") 
+            
+            # Hide if quantity is 0
+            if current_qty == 0:
+                qty_badge.place_forget() 
+            
+            # Store the reference for later updates
+            if prod_id not in self.cart_qty_labels:
+                self.cart_qty_labels[prod_id] = []
+            self.cart_qty_labels[prod_id].append(qty_badge)
+            # --- END NEW: Cart Badge Implementation ---
 
             # Image
             img = self.load_product_image(image_filename, size=(80, 80))
@@ -598,6 +645,7 @@ class UserDashboard(ctk.CTk):
         self.new_items_scroll_frame.grid(row=6, column=0, sticky="ew", pady=(10, 0))
         
         new_items = self.fetch_products_by_flag(flag_column="is_new", limit=12)
+        active_quantities = self.fetch_active_cart_quantities()
         
         if not new_items:
             new_items = [
@@ -626,6 +674,31 @@ class UserDashboard(ctk.CTk):
             )
             card.grid(row=0, column=i, padx=10, pady=(0, 40))
             card.pack_propagate(False)
+            # --- NEW: Cart Badge Implementation ---
+            current_qty = active_quantities.get(prod_id, 0)
+            
+            # The red circle/badge
+            qty_badge = ctk.CTkLabel(
+                card, 
+                text=str(current_qty),
+                width=24, height=24,
+                fg_color="red",
+                text_color="white",
+                font=("Arial", 12, "bold"),
+                corner_radius=12 # Makes it a circle
+            )
+            # Position it at the top right of the card (e.g., 85% across, 8% down)
+            qty_badge.place(relx=0.85, rely=0.08, anchor="center") 
+            
+            # Hide if quantity is 0
+            if current_qty == 0:
+                qty_badge.place_forget() 
+            
+            # Store the reference for later updates
+            if prod_id not in self.cart_qty_labels:
+                self.cart_qty_labels[prod_id] = []
+            self.cart_qty_labels[prod_id].append(qty_badge)
+            # --- END NEW: Cart Badge Implementation ---
 
             # Image
             img = self.load_product_image(image_filename, size=(80, 80))
@@ -666,18 +739,23 @@ class UserDashboard(ctk.CTk):
             )
             add_btn.pack(pady=(6, 10))
                 
-    
-    def _create_add_button(self, master, product_id, name, price):
-        return ctk.CTkButton(master, text="Add", 
-                                   command=lambda p=product_id, n=name, pr=price: self.add_to_cart(p, n, pr),
-                                   width=80,      
-                                   height=25,     
-                                   font=("Arial", 14, "bold"), 
-                                   fg_color=self.PRIMARY_COLOR, 
-                                   hover_color="#4338CA", 
-                                   text_color="white", 
-                                   corner_radius=20) 
-    
+    def fetch_active_cart_quantities(self):
+        try:
+            q = """
+                SELECT product_id, SUM(quantity) AS total_quantity
+                FROM check_out
+                WHERE customer_id = %s AND total IS NULL
+                GROUP BY product_id
+            """
+            rows = db.fetchall(q, (self.customer_id,))
+            
+            # Convert list of dicts to a single dict {product_id: total_quantity}
+            cart_quantities = {r['product_id']: r['total_quantity'] for r in rows}
+            return cart_quantities
+
+        except Exception as e:
+            print(f"Error fetching active cart quantities: {e}")
+            return {}
     
     def create_checkout_item_ui(self, parent, product_name, image_url, price, quantity):
         item_frame = ctk.CTkFrame(parent, fg_color="white", corner_radius=10)
@@ -937,6 +1015,8 @@ class UserDashboard(ctk.CTk):
             self.show_toast("Stock error or quantity is zero!", "red")
             return
 
+        final_qty = 0 # To store the new total for the UI update
+
         try:
             conn = db.DB_Connection()
             cursor = conn.cursor()
@@ -950,11 +1030,14 @@ class UserDashboard(ctk.CTk):
             row = cursor.fetchone()
 
             if row is None:
+                # Insert new
                 cursor.execute("""
                     INSERT INTO check_out (product_id, customer_id, items, price, quantity, item_total)
                     VALUES (%s, %s, %s, %s, %s, %s)
                 """, (product_id, self.customer_id, name, price, qty, float(price) * qty))
+                final_qty = qty
             else:
+                # Update existing
                 cart_id, current_qty = row
                 new_qty = current_qty + qty
                 new_total = new_qty * float(price)
@@ -963,13 +1046,23 @@ class UserDashboard(ctk.CTk):
                     SET quantity = %s, item_total = %s
                     WHERE cart_id = %s AND total IS NULL
                 """, (new_qty, new_total, cart_id))
+                final_qty = new_qty
 
             conn.commit()
+            
+            # 1. Show Toast
             self.show_added_to_cart_toast(name)
 
-
-            # update cart icon
+            # 2. Update Top-Right Cart Icon
             self.update_cart_item_count()
+            
+            # 3. === NEW: Update Card Badges ===
+            if product_id in self.cart_qty_labels:
+                for badge in self.cart_qty_labels[product_id]:
+                    # Update text
+                    badge.configure(text=str(final_qty))
+                    # Make visible if it was hidden
+                    badge.place(relx=0.85, rely=0.08, anchor="center")
 
         except Exception as e:
             print(f"Error adding to cart: {e}")
@@ -980,8 +1073,14 @@ class UserDashboard(ctk.CTk):
                 conn.close()
             except:
                 pass
-
     
+    def clear_dashboard_cart_badges(self):
+        print("Clearing dashboard cart badges...")
+        for product_id, badge_list in self.cart_qty_labels.items():
+            for badge in badge_list:
+                badge.configure(text="0")
+                badge.place_forget() # Hide the badge
+        self.update_all_dashboard_badges()
     
     def create_quantity_selector(self, parent, stock_quantity):
         qty = 1 if stock_quantity > 0 else 0
@@ -1012,6 +1111,33 @@ class UserDashboard(ctk.CTk):
             minus_btn.configure(state="disabled")
 
         return qty_var
+    
+    def update_all_dashboard_badges(self):
+        """
+        Refreshes all cart quantity badges (Product Cards and Category Cards)
+        on the dashboard.
+        """
+        # 1. Fetch current product quantities for Popular/New Items
+        active_product_quantities = self.fetch_active_cart_quantities()
+
+        # 2. Update Product Badges (Popular/New Items)
+        for prod_id, badge_list in self.cart_qty_labels.items():
+            final_qty = active_product_quantities.get(prod_id, 0)
+            
+            for badge in badge_list:
+                badge.configure(text=str(final_qty))
+                
+                # Show/Hide logic
+                if final_qty > 0:
+                     badge.place(relx=0.85, rely=0.08, anchor="center") # Use same position as in original implementation
+                else:
+                     badge.place_forget()
+
+        # 3. Update Category Badges
+        # Since the Category UI manages its own badges, we call its public update method.
+        if self.category_ui and hasattr(self.category_ui, 'update_category_badges'):
+            # This method will handle fetching category-specific quantities and updating badges
+            self.category_ui.update_category_badges()
 
 
     def on_add_to_cart(self, product_id, product_name, price_text, quantity):

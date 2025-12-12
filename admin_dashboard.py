@@ -126,7 +126,7 @@ class AdminDashboard(ctk.CTk):
                                               anchor="w", image=self.load_icon("setting.png", 20), 
                                               compound="left", command=self.show_setting_content,
                                               width=150, height=50)
-        self.setting_button.grid(row=8, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 8
+        self.setting_button.grid(row=8, column=0, sticky="ew", pady=8, padx=10) # Adjusted row to 
         
         #  Logout Button 
         self.logout_button = ctk.CTkButton(self.sidebar_frame, text="Logout", 
