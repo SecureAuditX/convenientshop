@@ -1,11 +1,9 @@
 ---
 
-# 📦 Convenient Shop Management System
+📦 Convenient Shop Management System
+Modern Desktop Application for Retail Operations
 
-### Modern Desktop Application for Retail Operations
-
-*A Python + CustomTkinter + MySQL Solution*
-
+A Python + CustomTkinter + MySQL Solution
 ---
 
 # 🖼️ Application Interface Preview
@@ -230,3 +228,4 @@ Access:
 # 📜 License
 
 MIT License
+
