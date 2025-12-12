@@ -125,7 +125,7 @@ class App(ctk.CTkFrame, HashingMixin):
             conn = mysql.connector.connect(
                 host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
                 user="avnadmin",
-                password="SECRET",
+                password="SECRETgit ",
                 database="conv_sshop_db"
             )
             cursor = conn.cursor(dictionary=True)
