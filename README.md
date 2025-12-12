@@ -11,7 +11,7 @@ A Python + CustomTkinter + MySQL Solution
 (Add your image by uploading it to your GitHub repo's `images/` folder and replacing the link below.)
 
 ```
-![User Dashboard Preview](https://github.com/SecureAuditX/convenientshop/blob/main/images/user_dashboard_preview.png)
+![User Dashboard Preview](images/user_dashboard_preview.png)
 ```
 ---
 
@@ -228,5 +228,6 @@ Access:
 # 📜 License
 
 MIT License
+
 
 
