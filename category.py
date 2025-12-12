@@ -5,7 +5,7 @@ from PIL import Image, ImageTk
 import mysql.connector
 
 # --- Configuration ---
-IMAGE_ROOT_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop" 
+IMAGE_ROOT_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop" 
 
 CARD_COLORS = [
     "#7DABDE",  # Blue
@@ -21,11 +21,11 @@ CARD_COLORS = [
 def get_db_connection():
     # Establishes connection to the MySQL database
     return mysql.connector.connect(
-        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
-        user="avnadmin",  
-        password="SECRET",  
-        port=24122,
-        database="conv_shop_db" 
+        host="localhost",
+        user="root",  
+        password="YourPasswordHere",  
+        port=3306,
+        database="conv_shop" 
     )
     
 

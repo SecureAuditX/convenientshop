@@ -5,7 +5,7 @@ from db_file import db
 import os
 
 
-IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images" # Re-use the user's defined path
+IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images" # Re-use the user's defined path
 
 def load_icon_placeholder(icon_name, size, placeholder_text=""):
    
@@ -67,7 +67,8 @@ class NewAnnouncementPopup(ctk.CTkToplevel):
             ("Name:", "name_entry", None),
             ("Discount Price:", "discount_price_entry", None),
             ("Discount Deadline (YYYY-MM-DD):", "discount_deadline_entry", None),
-            ("Status (ACTIVE/PENDING):", "status_entry", ["ACTIVE", "PENDING"])
+            ("Status (ACTIVE/PENDING):", "status_entry", ["ACTIVE", "PENDING"]),
+            ("")
         ]
         
         self.entries = {}

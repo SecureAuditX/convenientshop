@@ -10,11 +10,11 @@ import certifi
 import csv
 import os
 
-DB_HOST = "mysql-convenientshop-conveniencestore01.b.aivencloud.com"
-DB_PORT = 24122
-DB_NAME = "conv_shop_db"
-DB_USER = "avnadmin"
-DB_PASS = "SECRET"
+DB_HOST = "localhost"
+DB_PORT = 3306
+DB_NAME = "conv_shop"
+DB_USER = "root"
+DB_PASS = "YourPasswordHere"
 
 def get_db_connection():
     # Use buffered=True to fetch all results immediately, preventing conn timeout issues

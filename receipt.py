@@ -5,7 +5,7 @@ from db_file import db
 from decimal import Decimal
 from datetime import datetime
 
-LOGO_PATH = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\logo.png"
+LOGO_PATH = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images\logo.png"
 
 BG = "#AFC0FF"
 PANEL_BG = "#AFC0FF"

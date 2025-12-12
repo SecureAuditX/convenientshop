@@ -1,3 +1,5 @@
+import os
+import stripe
 import customtkinter as ctk
 from PIL import Image, ImageTk
 import mysql.connector
@@ -8,17 +10,18 @@ import random
 from datetime import datetime
 
 
-IMAGE_ROOT_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop" 
+IMAGE_ROOT_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop"
+stripe.api_key=os.getenv("STRIPE_SECRET_KEY") 
 
 # Database connection setup
 def get_db_connection():
     # Establishes connection to the MySQL database
     return mysql.connector.connect(
-        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
-        user="avnadmin",  
-        password="SECRET",  
-        port=24122,
-        database="conv_shop_db" 
+        host="localhost",
+        user="root",  
+        password="YourPasswordHere",  
+        port=3306,
+        database="conv_shop" 
     )
 def get_cart_items(customer_id):
     try:
@@ -48,13 +51,13 @@ def get_cart_items(customer_id):
         return []
 
 class Payment(ctk.CTkFrame):
-    def __init__(self, parent_frame, customer_id, email, cart_update_callback=None):
+    def __init__(self, parent_frame, customer_id, email, cart_update_callback=None,dashboard_badge_reset_callback=None):
         # Payment is the single main frame
         super().__init__(parent_frame, fg_color="#f8f9ff")
         self.customer_id = customer_id
         self.email = email
         self.cart_update_callback = cart_update_callback
-        
+        self.dashboard_badge_reset_callback = dashboard_badge_reset_callback
         # Configure grid for the Payment frame (self)
         self.grid_columnconfigure(0, weight=1) 
         self.grid_rowconfigure(0, weight=1)
@@ -136,7 +139,7 @@ class Payment(ctk.CTkFrame):
         card_type_lbl.grid(row=1, column=1, sticky="nw", padx=(10, 25), pady=(10, 10))
         astrix_lbl = ctk.CTkLabel(self.add_card_container, text="*", text_color="red", font=("Arial", 17)) 
         astrix_lbl.grid(row=1, column=1, sticky="nw", padx=(85, 15), pady=(10, 10))
-        self.card_combo = ctk.CTkComboBox(self.add_card_container, values=["Visa", "Master Card", "Union Pay"], fg_color="#D6D9FF", border_color="#D6D9FF", width=250, height=40)
+        self.card_combo = ctk.CTkComboBox(self.add_card_container, values=["Visa", "Master Card", "Union Pay"], fg_color="#D6D9FF", border_color="#D6D9FF", width=250, height=40,state="readonly")
         self.card_combo.grid(row=1, column=1, sticky="e", padx=(10, 20), pady=(40, 10))
         self.card_combo.set("Visa") # Capitalized for consistency
 
@@ -147,6 +150,7 @@ class Payment(ctk.CTkFrame):
         astrix_lbl.grid(row=2, column=0, sticky="nw", padx=(85, 15), pady=(10, 10))
         self.card_numbr_entry = ctk.CTkEntry(self.add_card_container, placeholder_text="(eg. 4335-6765-74300)", fg_color="#D6D9FF", border_color="#D6D9FF", width=250, height=40)
         self.card_numbr_entry.grid(row=2, column=0, sticky="w", padx=(20, 10), pady=(40, 10))
+        self.card_numbr_entry.bind("<KeyRelease>",self.update_card_type)
         
         # Expiry
         card_expiry_lbl = ctk.CTkLabel(self.add_card_container, text="Expiration Date", text_color="black", font=("Arial", 16))
@@ -182,7 +186,7 @@ class Payment(ctk.CTkFrame):
         
         # Alipay/Wechat Pay Container
         self.alipay_container = ctk.CTkFrame(self.add_card_container, fg_color="#D6D9FF", height=80, corner_radius=10)
-        self.alipay_container.grid(row=5, column=0, columnspan=2, sticky="ew", padx=(20, 20), pady=(60, 10))
+        self.alipay_container.grid(row=5, column=0, columnspan=2, sticky="ew", padx=(20, 20), pady=(10, 10))
         self.alipay_container.grid_columnconfigure(0, weight=1)
         self.alipay_container.grid_columnconfigure(1, weight=1)
         self.alipay_container.grid_propagate(False)
@@ -231,10 +235,34 @@ class Payment(ctk.CTkFrame):
         self.total_val = ctk.CTkLabel(self.cart_bill_container, text="$0.00",
                                       font=("Arial", 15, "bold"), text_color="#975102")
         self.total_val.grid(row=3, column=1, padx=(0, 20), pady=(20, 20), sticky="e")
+       # chekbox to save payment info
+        # save_payment_text=ctk.CTkLabel(self.cart_bill_container,text="Save Card",text_color="black",font=("Arial",15))
+        # save_payment_text.grid(row=4,column=0,columnspan=2,padx=50,pady=(300,20))
+        self.check_var=ctk.StringVar(value="off")
+        self.check_payment=ctk.CTkCheckBox(self.cart_bill_container,text="Save Card",variable=self.check_var,onvalue="on",offvalue="off",width=20, height=20)
+        self.check_payment.grid(row=4, column=0, columnspan=2, padx=(10, 0), pady=(180, 10), sticky="w")
+        # combo box for saved payments
+        self.combobox_savedPay=ctk.CTkComboBox(self.add_card_container,values=[], fg_color="#D6D9FF", border_color="#D6D9FF", width=250, height=40,state="readonly")
+        self.combobox_savedPay.grid(row=4,column=0,columnspan=2,padx=(0,0),pady=(0,0))
+        self.combobox_savedPay.set("Use New Card")
+        self.saved_card_data=self.get_saved_card(customer_id)
+        self.save_card_map={}
+        combo_values=["Use New Card"]
+        if self.saved_card_data:
+            for card in self.saved_card_data:
+                self.save_card_map[card["label"]]=card['id']
+                combo_values.append(card['label'])
+            self.combobox_savedPay.configure(values=combo_values,state="readonly")
+            self.combobox_savedPay.set("Chose Saved Card")
+        else:
+            self.combobox_savedPay.configure(values=["No Saved Card"],state="disabled")
+            self.combobox_savedPay.set("No Saved Card")
+            
+        self.combobox_savedPay.configure(command=self.on_saved_card_selected)
         
         # Save and Pay Button
         save_pay_btn = ctk.CTkButton(self.cart_bill_container, text="Pay", text_color="black", fg_color="#727AE0", font=("Arial", 16), corner_radius=20, width=150, height=37, hover_color="#9197EB", command=self.on_save_and_pay)
-        save_pay_btn.grid(row=4, column=0, columnspan=2, padx=40, pady=(250, 20))
+        save_pay_btn.grid(row=5, column=0, columnspan=2, padx=40, pady=(10, 20))
 
         # Initial total update
         self.update_totals()
@@ -269,6 +297,23 @@ class Payment(ctk.CTkFrame):
         self.current_total = total
         
     def validate_payment_form(self):
+        # 1. Check if they are using a saved card first!
+        selected_option = self.combobox_savedPay.get()
+        if selected_option in self.save_card_map:
+             # We just need to pass some dummy data back so the database insertion later doesn't crash.
+             # Since they used a saved card, we don't have their raw card details anymore.
+             dummy_data = {
+                 "full_name": "Saved User", 
+                 "card_type": "Saved Card", 
+                 "card_no_masked": "****",
+                 "exp_date": datetime.now(), 
+                 "cvv_masked": "***", 
+                 "address": "Saved Address", 
+                 "email": "saved@email.com"
+             }
+             return True, dummy_data
+
+        # ... rest of your existing validation code ...
         full_name = self.name_input.get().strip()
         card_type = self.card_combo.get().strip()
         card_no_raw = self.card_numbr_entry.get().replace(" ", "").replace("-", "")
@@ -391,7 +436,67 @@ class Payment(ctk.CTkFrame):
 
         shipping = 6.10 if subtotal > 0 else 0.00
         total = subtotal + shipping
-
+        
+        #payment gateway
+        stripe.api_key=os.getenv("STRIPE_SECRET_KEY")
+        
+        #create the paymnet method and paymnet intent for current logged in customer session     
+        amount_in_cents=int(round(total*100))
+        stripe_transaction_id=None
+        ##checking if cyustomer card is already is saved or not
+        
+        try:
+            selected_option=self.combobox_savedPay.get()
+            if selected_option in self.save_card_map:
+                payment_token=self.save_card_map[selected_option]
+                stripe_cust_id=self.get_or_create_stripe_customer(
+                self.customer_id,
+                data['email'],
+                data['full_name']
+                )
+                    
+                        
+                Intent=stripe.PaymentIntent.create(
+                amount=amount_in_cents,
+                currency="usd",
+                customer=stripe_cust_id,
+                payment_method=payment_token,
+                payment_method_types=['card'],
+                confirm=True
+                )
+            else:
+                save_card_checked = (self.check_var.get() == "on")
+                card_type=self.card_combo.get()
+                payment_token="pm_card_visa" #default
+                if card_type=="Master Card":
+                    payment_token="pm_card_mastercard"
+                elif card_type=="Union Pay":
+                    payment_token="pm_card_unionpay"
+                intent_args={
+                    "amount":amount_in_cents,
+                    "currency":"usd",
+                    "payment_method":payment_token,
+                    "payment_method_types":['card'],
+                    "confirm": True
+                }
+                if save_card_checked:
+                    stripe_cust_id=self.get_or_create_stripe_customer(self.customer_id, data["email"], data["full_name"])
+                    intent_args["customer"]=stripe_cust_id
+                    intent_args["setup_future_usage"]="off_session"
+                Intent=stripe.PaymentIntent.create(**intent_args)
+            successful="Payment Successfull"
+            self.show_message(successful, "green")
+            stripe_transaction_id=Intent.id
+                
+        except stripe.error.CardError as e:
+            error_message=e.user_message if e.user_message else "Card Declined"
+            self.show_message(f"Payment Failed {error_message}","red")
+            return
+        except Exception as e:
+            error=e
+            self.show_message(f"Unexpected Error {error}","red")
+            return
+        
         # Database Transaction
         conn = None
         cursor = None
@@ -403,8 +508,8 @@ class Payment(ctk.CTkFrame):
             cursor.execute(
                 """
                 INSERT INTO payment
-                (customer_id, full_name, card_no, expiration_date, cvv, email, payment_status)
-                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                (customer_id, full_name, card_no, expiration_date, cvv, email, payment_status,transaction_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s,%s)
                 """,
                 (
                     self.customer_id,
@@ -414,6 +519,7 @@ class Payment(ctk.CTkFrame):
                     data["cvv_masked"],
                     data["email"],
                     "Paid",
+                    stripe_transaction_id,
                 )
             )
 
@@ -509,7 +615,83 @@ class Payment(ctk.CTkFrame):
         # --- Show Receipt After Successful Payment ---
         from receipt import ReceiptWindow
         ReceiptWindow(order_no, self.customer_id)
-
+    
+    def get_saved_card(self,local_customer_id):
+        stripe_cust_id=None
+        try:
+            conn=get_db_connection()
+            cursor=conn.cursor()
+            cursor.execute("SELECT stripe_customer_id FROM customers WHERE customer_id=%s",(local_customer_id,))
+            result=cursor.fetchone()
+            if result and result[0]:
+                stripe_cust_id=result[0] 
+        except Exception as e:
+            print(f"ERROR fetching saved card: {e}")
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
+        if not stripe_cust_id:
+            return []
+        try:
+            payment_methods=stripe.PaymentMethod.list(
+                customer=stripe_cust_id,
+                type='card'
+            )
+            saved_cards=[]
+            for pm in payment_methods.data:
+                brand=pm.card.brand.capitalize()
+                pm_id=pm.id
+                last_4=pm.card.last4
+                display_label=f"{brand} ending with {last_4}"
+                saved_cards.append({"label":display_label,"id":pm_id})
+            return saved_cards
+        except Exception as e:
+            print(f"Stripe card fething error{e}")
+            return []
+                
+                
+                        
+    def on_saved_card_selected(self,choice):
+        if choice in self.save_card_map:
+            new_state="disabled"
+            self.check_var.set("off")
+            self.check_payment.configure(state="disabled")
+        else:
+            new_state="normal"
+            self.check_payment.configure(state="normal")
+        self.name_input.configure(state=new_state)
+        self.card_numbr_entry.configure(state=new_state)
+        self.card_expiry_entry.configure(state=new_state)
+        self.cvv_entry.configure(state=new_state)
+        self.email_entry.configure(state=new_state)
+        self.card_combo.configure(state=new_state)
+        #self.address_entry.configure(state=new_state)
+            
+            
+        
+    def get_or_create_stripe_customer(self,local_customer_id,customer_email,customer_name):
+        try:
+            conn=get_db_connection()
+            cursor=conn.cursor()
+            cursor.execute(""" SELECT stripe_customer_id FROM customers WHERE customer_id=%s""",(local_customer_id,))
+            meow=cursor.fetchone()
+            if meow and meow[0]:
+                return meow[0]
+            else:
+                
+                    new_customer=stripe.Customer.create(
+                        email=customer_email,
+                        name=customer_name
+                    )
+                    cursor.execute("""UPDATE customers SET stripe_customer_id=%s WHERE customer_id=%s""",(new_customer.id,local_customer_id,))
+                    conn.commit()
+                    return new_customer.id
+        except Exception as e:
+            print(f"ERROR creating stripe customer: {e}")
+            return None
+        finally:
+            if cursor: cursor.close()
+            if conn: conn.close()
         
     def reset_cart_after_checkout(self):
         """

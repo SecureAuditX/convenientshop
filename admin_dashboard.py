@@ -22,7 +22,7 @@ def image_path_join(*parts):
     base = os.path.dirname(__file__)
     return os.path.normpath(os.path.join(base, *parts))
 
-IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images"
+IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images"
 
 class AdminDashboard(ctk.CTk):
     def __init__(self, customer_id, email):

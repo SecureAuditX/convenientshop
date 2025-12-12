@@ -19,7 +19,7 @@ from category import (
 )
 
 # Images path
-IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images"
+IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images"
 
 CARD_COLORS = [
     "#7DABDE",  # Blue
@@ -171,7 +171,7 @@ class UserDashboard(ctk.CTk):
         self.cart_icon_frame.grid(row=0, column=1, sticky="ne", padx=30, pady=(40, 0))  # Top-right corner
   
         # Load cart icon
-        self.cart_icon = Image.open(r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images\shopping-cart.png").resize((30, 30), Image.LANCZOS)
+        self.cart_icon = Image.open(r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images\shopping-cart.png").resize((30, 30), Image.LANCZOS)
         self.cart_image = ImageTk.PhotoImage(self.cart_icon)
 
         self.cart_label = ctk.CTkLabel(self.cart_icon_frame, image=self.cart_image, text="")
@@ -532,13 +532,120 @@ class UserDashboard(ctk.CTk):
                     claim_color=props["claim_color"],
                 )
                 card.pack(side="left", padx=10, pady=10)
+                
+        #----Recomendations section------
+        
+        self.recomendations=ctk.CTkLabel(parent_frame,text="Recomendations",font=("Arial",22,"bold"),text_color="black")
+        self.recomendations.grid(row=3,column=0,sticky="w",padx=20,pady=(0,0))
+        self.recomendations_scroll_frame = ctk.CTkScrollableFrame(parent_frame, fg_color="transparent", orientation="horizontal", height=230)
+        self.recomendations_scroll_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        # checking if if user is new
+        new_user=self.check_new_user_for_recomendation(self.customer_id)
+        if new_user:
+            popular_items = self.fetch_products_by_flag(flag_column="is_popular", limit=12)
+            active_quantities = self.fetch_active_cart_quantities()
+            if not popular_items:
+                popular_items = [
+                    {"product_id": 1, "product_name": "Bread", "price":"6.99", "weight":"2.5kg", "product_image":"bread.png"},
+                    {"product_id": 2, "product_name": "Egg", "price":"12.99", "weight":"4kg", "product_image":"egg.png"},
+                    {"product_id": 3, "product_name": "Coke", "price":"2.90", "weight":"0.3kg", "product_image":"coke.png"},
+                    {"product_id": 4, "product_name": "Meat", "price":"128.98", "weight":"9kg", "product_image":"meat.png"},
+                    {"product_id": 5, "product_name": "Oil", "price":"94.98", "weight":"12kg", "product_image":"oil.png"},
+                    {"product_id": 6, "product_name": "Chips", "price":"0.98", "weight":"0.1kg", "product_image":"chips.png"},
+                ]
 
+            for i, item in enumerate(popular_items[:12]):
+        
+                # Extract product info
+                prod_id = item.get("product_id")
+                name = item.get("product_name")
+                price = float(item.get("price"))
+                image_filename = item.get("image_url") or item.get("product_image")
+                stock_qty = item.get("stock_quantity", 9999)
+
+                # Create card
+                card = ctk.CTkFrame(
+                    self.recomendations_scroll_frame,
+                    width=170,
+                    height=260,
+                    fg_color="white",
+                    corner_radius=12
+                )
+                card.grid(row=0, column=i, padx=10, pady=(0, 40))
+                card.pack_propagate(False)
+                current_qty = active_quantities.get(prod_id, 0)
+                
+                # The red circle/badge
+                qty_badge = ctk.CTkLabel(
+                    card, 
+                    text=str(current_qty),
+                    width=24, height=24,
+                    fg_color="red",
+                    text_color="white",
+                    font=("Arial", 12, "bold"),
+                    corner_radius=12 # Makes it a circle
+                )
+                # Position it at the top right of the card (e.g., 85% across, 8% down)
+                qty_badge.place(relx=0.85, rely=0.08, anchor="center") 
+                
+                # Hide if quantity is 0
+                if current_qty == 0:
+                    qty_badge.place_forget() 
+                
+                # Store the reference for later updates
+                if prod_id not in self.cart_qty_labels:
+                    self.cart_qty_labels[prod_id] = []
+                self.cart_qty_labels[prod_id].append(qty_badge)
+                # --- END NEW: Cart Badge Implementation ---
+
+                # Image
+                img = self.load_product_image(image_filename, size=(80, 80))
+                if img:
+                    img_lbl = ctk.CTkLabel(card, image=img, text="")
+                    img_lbl.image = img
+                    img_lbl.pack(pady=(10, 2))
+                else:
+                    ctk.CTkLabel(card, text="🛒", font=("Arial", 35)).pack(pady=(10, 2))
+
+                # Name
+                ctk.CTkLabel(
+                    card, text=name,
+                    font=("Arial", 14, "bold"),
+                    wraplength=150
+                ).pack(pady=(0, 0))
+
+                # Price
+                ctk.CTkLabel(
+                    card, text=f"${price:.2f}",
+                    font=("Arial", 15, "bold")
+                ).pack(pady=(0, 0))
+
+                # Quantity selector
+                qty_var = self.create_quantity_selector(card, stock_qty)
+
+                # Add to cart button
+                add_btn = ctk.CTkButton(
+                    card,
+                    text="Add to Cart 🛒",
+                    width=130,
+                    height=40,
+                    fg_color="#A4A4EB",
+                    text_color="white",
+                    corner_radius=12,
+                    command=lambda pid=prod_id, n=name, p=price, qv=qty_var, s=stock_qty:
+                        self.add_to_cart_from_dashboard(pid, n, p, qv, s)
+                )
+                add_btn.pack(pady=(6, 10))
+        else:
+            pass #render recomendation on on past history
+        
+        
         # --- POPULAR ITEMS SECTION ---
         self.popular_items_label = ctk.CTkLabel(parent_frame, text="Popular Items", font=("Arial", 22, "bold"), text_color="black")
-        self.popular_items_label.grid(row=3, column=0, sticky="w",padx =20, pady=(0, 0))
+        self.popular_items_label.grid(row=5, column=0, sticky="w",padx =20, pady=(0, 0))
         
         self.popular_items_scroll_frame = ctk.CTkScrollableFrame(parent_frame, fg_color="transparent", orientation="horizontal", height=230)
-        self.popular_items_scroll_frame.grid(row=4, column=0, sticky="ew", pady=(10, 0))
+        self.popular_items_scroll_frame.grid(row=6, column=0, sticky="ew", pady=(10, 0))
         
         popular_items = self.fetch_products_by_flag(flag_column="is_popular", limit=12)
         active_quantities = self.fetch_active_cart_quantities()
@@ -639,10 +746,10 @@ class UserDashboard(ctk.CTk):
 
         # --- NEW ITEMS SECTION ---
         self.new_items_label = ctk.CTkLabel(parent_frame, text="New Items", font=("Arial", 22, "bold"), text_color="black")
-        self.new_items_label.grid(row=5, column=0, sticky="w", padx=20, pady=(10, 0))
+        self.new_items_label.grid(row=7, column=0, sticky="w", padx=20, pady=(10, 0))
         
         self.new_items_scroll_frame = ctk.CTkScrollableFrame(parent_frame, fg_color="transparent", orientation="horizontal", height=230)
-        self.new_items_scroll_frame.grid(row=6, column=0, sticky="ew", pady=(10, 0))
+        self.new_items_scroll_frame.grid(row=8, column=0, sticky="ew", pady=(10, 0))
         
         new_items = self.fetch_products_by_flag(flag_column="is_new", limit=12)
         active_quantities = self.fetch_active_cart_quantities()
@@ -1359,7 +1466,20 @@ class UserDashboard(ctk.CTk):
         except Exception as e:
             print("Error loading customer name: ", e)
             self.username_label.configure(text="User")
-    
+    def check_new_user_for_recomendation(self,customer_id):
+        try:
+            if not self.customer_id:
+                self.username_label.configure(text="Guest")
+                return
+            q="select customer_id from order_history where customer_id=%s limit 1"
+            result=db.fetchall(q,(self.customer_id,))
+            
+            if not result :
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(f"DB featching error {e}")
 
 if __name__ == "__main__":
     app = UserDashboard(customer_id=None, email=None)

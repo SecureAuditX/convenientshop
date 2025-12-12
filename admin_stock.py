@@ -10,9 +10,9 @@ def get_db_connection():
     return mysql.connector.connect(
         host="localhost",
         user="root",  
-        password="SECRET",  
+        password="YourPasswordHere",  
         port = 3306,
-        database="convenient_shop" 
+        database="conv_shop" 
     )
 
 def image_path_join(*parts):
@@ -27,7 +27,7 @@ def image_path_join(*parts):
     base = os.path.dirname(__file__)
     return os.path.normpath(os.path.join(base, *parts))
 
-IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images"
+IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images"
 
 class Stock(ctk.CTkFrame): 
     def __init__(self, parent_frame, customer_id, email):

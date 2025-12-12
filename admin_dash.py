@@ -10,11 +10,11 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 def get_db_connection():
     return mysql.connector.connect(
-        host="mysql-convenientshop-conveniencestore01.b.aivencloud.com",
-        user="avnadmin",
-        password="SECRET",
-        port=24122,
-        database="conv_shop_db"
+        host="localhost",
+        user="root",
+        password="YourPasswordHere",
+        port=3306,
+        database="conv_shop"
     )
 
 def image_path_join(*parts):
@@ -29,7 +29,7 @@ def image_path_join(*parts):
     base = os.path.dirname(__file__)
     return os.path.normpath(os.path.join(base, *parts))
 
-IMAGE_BASE_DIR = r"C:\XFiles\CodingFile\Python\Desktop_App\convenientshop\images"
+IMAGE_BASE_DIR = r"C:\Users\Mubashra Nouman\Documents\phyton programs\ConvenientShop\convenientshop\images"
 
 class Dashboard(ctk.CTkFrame):
     def __init__(self, master, customer_id, email):
