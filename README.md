@@ -1,18 +1,14 @@
----
+# 📦 Convenient Shop Management System
 
-📦 Convenient Shop Management System
 Modern Desktop Application for Retail Operations
-
 A Python + CustomTkinter + MySQL Solution
+
 ---
 
 # 🖼️ Application Interface Preview
 
-(Add your image by uploading it to your GitHub repo's `images/` folder and replacing the link below.)
-
-```
 ![User Dashboard Preview](images/user_dashboard_preview.png)
-```
+
 ---
 
 # 📛 Project Badges
@@ -30,10 +26,17 @@ A Python + CustomTkinter + MySQL Solution
 
 # 🧑‍🤝‍🧑 Team Members
 
-**Team Leader:** *ABDULKARIM UMAR (SecureAuditX)*
-**Member 1:** *MUSAB MUHAMMAD*
-**Member 2:** *ABDELKARIM AHMED*
-**Member 3:** *LISA UGENE*
+**Team Leader:**
+UMAR ABDULKARIM (SecureAuditX)
+
+**Team Member 1:**
+MUSAB MUHAMMAD
+
+**Team Member 2:**
+ABDELKARIM AHMED
+
+**Team Member 3:**
+LISA UGENE
 
 ---
 
@@ -88,47 +91,40 @@ A Python + CustomTkinter + MySQL Solution
 
 ---
 
-# 📝 GitHub-Optimized Documentation
+# 📘 Overview
 
-## 📘 Overview
-
-The **Convenient Shop Management System** is a production-ready desktop application designed to support real-world convenience store operations, including inventory management, POS workflows, analytics, and account access control.
-
-Built with:
-
-* CustomTkinter (UI/UX)
-* MySQL (Data persistence)
-* Matplotlib (Analytics)
+The **Convenient Shop Management System** is a modern desktop application designed for convenience-store operations such as stock management, POS functionalities, customer handling, analytics, and reporting.
+Built with Python (CustomTkinter), MySQL, and Matplotlib, it provides a professional and scalable retail management experience.
 
 ---
 
 # ✨ Key Features
 
-## 🔐 Admin Portal (admin_dashboard.py)
+## 🔐 Admin Portal
 
-* Real-time KPI Dashboard
-* Stock & Supplier Management
-* Profit, Income & Expense Analytics
-* Sales & Inventory Reporting (CSV export)
-* Internal Announcements
-* Staff & Customer Account Management
-* System Configuration
+* Real-time KPI dashboard
+* Stock and supplier management
+* Income, expense, and profit analytics
+* Sales and inventory reporting (CSV export)
+* Internal announcements
+* Staff and customer account management
+* System configuration tools
 
 ---
 
-## 🛒 User / Customer Portal (user_dashboard.py)
+## 🛒 User / Customer Portal
 
-* Category-Based Product Browsing
-* Shopping Cart
-* Checkout & Payment Simulation
-* Order History
-* Personal Account Settings
+* Browse products by category
+* Add/remove items into shopping cart
+* Checkout and payment simulation
+* View order history
+* Edit account settings
 
 ---
 
 # ⚙️ Installation & Setup
 
-## 1. Prerequisites
+## 1. Requirements
 
 * Python 3.8+
 * MySQL Server
@@ -147,26 +143,22 @@ CREATE DATABASE convenient_shop;
 USE convenient_shop;
 ```
 
-Ensure required tables exist:
-`products`, `customers`, `sales`, `category`, `announcements`, etc.
+Make sure required tables exist:
+`products`, `customers`, `sales`, `category`, `announcements`, `stock`, etc.
 
-Configure credentials in `db_file.py` (no credentials included in this README).
+Configure your MySQL credentials in `db_file.py`.
 
 ---
 
 # 🖼️ Image Setup
 
-Images stored under:
+Place all images in:
 
 ```
-convenientshop/images
+convenientshop/images/
 ```
 
-Includes:
-
-* Icons
-* Product images
-* Placeholders
+This includes icons, product thumbnails, and placeholders.
 
 ---
 
@@ -175,11 +167,6 @@ Includes:
 ```
 python login.py
 ```
-
-Access:
-
-* **Admin Panel**
-* **Customer Dashboard**
 
 ---
 
@@ -214,20 +201,17 @@ Access:
 
 # 🚀 Future Enhancements
 
-* Barcode scanner support
-* Real payment integration (UniPay)
-* Multi-branch cloud sync
-* AI-driven stock prediction
-* RBAC (Role-Based Access Control)
-* Activity auditing
-* UI theme customization
-* Recommendation engine
+* Barcode scanner integration
+* Real payment gateway support
+* Cloud-backed multi-branch syncing
+* AI-based stock prediction
+* RBAC (role-based access control)
+* Audit logs & staff activity monitoring
+* Full UI theme customization
+* Personalized recommendation engine
 
 ---
 
 # 📜 License
 
 MIT License
-
-
-
