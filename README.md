@@ -5,13 +5,9 @@ A Python + CustomTkinter + MySQL Solution
 
 ---
 
-# 🖼️ Application Interface Preview
-
 ![User Dashboard Preview](images/user_dashboard_preview.png)
 
 ---
-
-# 📛 Project Badges
 
 <p align="left">
   <img src="https://img.shields.io/badge/Python-3.8%2B-blue" />
@@ -215,3 +211,4 @@ python login.py
 # 📜 License
 
 MIT License
+
